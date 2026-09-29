@@ -6,16 +6,16 @@
  * `surface-variant` (the Flutter theme left most of those unset).
  */
 @theme {
-  --color-surface: #fbf8ff;
-  --color-on-surface: #181a2e;
+  --color-surface: #f1f3f6;
+  --color-on-surface: #212121;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f5f2ff;
-  --color-surface-container: #eeecfc;
-  --color-surface-container-high: #e7e6fb;
-  --color-surface-container-highest: #e0e0fc;
-  --color-on-surface-variant: #584140;
-  --color-outline: #8c706f;
-  --color-outline-variant: #d9c2c0;
+  --color-surface-container-low: #f6f7f9;
+  --color-surface-container: #eef0f3;
+  --color-surface-container-high: #e8eaee;
+  --color-surface-container-highest: #e1e4e9;
+  --color-on-surface-variant: #565b66;
+  --color-outline: #878d99;
+  --color-outline-variant: #d7dbe2;
 
   --color-primary: #ae2f34;
   --color-on-primary: #ffffff;
@@ -32,15 +32,21 @@
   --color-tertiary-container: #be9631;
   --color-on-tertiary-container: #433000;
 
+  /* Storefront action colours: add to cart / buy now, in-stock green, footer navy */
+  --color-cta: #ff9f00;
+  --color-buy: #fb641b;
+  --color-success: #388e3c;
+  --color-footer: #1d2233;
+
   --color-error: #ba1a1a;
   --color-on-error: #ffffff;
 
   --font-sans: var(--font-work-sans), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 
-  --shadow-soft: 0 8px 18px rgb(0 0 0 / 0.03);
-  --shadow-card: 0 12px 26px rgb(0 0 0 / 0.08);
-  --shadow-float: 0 20px 40px rgb(0 0 0 / 0.1);
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.08);
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 0.12);
+  --shadow-float: 0 4px 16px rgb(0 0 0 / 0.16);
 
   --breakpoint-xs: 620px;
 

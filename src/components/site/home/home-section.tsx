@@ -1,35 +1,32 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { ProductCard } from "@/components/product/product-card";
 import type { Section } from "@/lib/api/types";
-import { cn } from "@/lib/utils";
+import { ProductRail } from "./product-rail";
 
-export function HomeSection({ section, index }: { section: Section; index: number }) {
+/** A curated section as a white panel with a horizontally scrolling rail. */
+export function HomeSection({ section }: { section: Section }) {
   const products = section.items.flatMap((item) => (item.productId ? [item.productId] : []));
   if (products.length === 0) return null;
 
   return (
-    <section
-      className={cn("px-6 py-14 md:px-8 md:py-[60px]", index % 2 === 0 && "bg-surface-container-highest/30")}
-    >
-      <div className="mx-auto max-w-7xl">
-        <div className="flex items-end justify-between gap-4">
-          <h2 className="t-headline-lg">{section.title}</h2>
-          <Link
-            href={`/sections/${section._id}`}
-            className="t-label flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-primary hover:bg-primary-container/20"
-          >
-            View All <ArrowRight className="size-4" aria-hidden />
-          </Link>
-        </div>
-        <ul className="scrollbar-none -mx-2 mt-6 flex snap-x gap-4 overflow-x-auto px-2 py-2">
-          {products.map((product) => (
-            <li key={product._id} className="w-[220px] shrink-0 snap-start sm:w-[260px]">
-              <ProductCard product={product} />
-            </li>
-          ))}
-        </ul>
+    <section className="bg-white shadow-soft">
+      <div className="flex items-center justify-between gap-4 border-b border-outline-variant/40 px-4 py-3 sm:px-5 sm:py-4">
+        <h2 className="font-display text-lg font-bold sm:text-xl">{section.title}</h2>
+        <Link
+          href={`/sections/${section._id}`}
+          className="flex h-9 items-center gap-1 rounded-sm bg-primary px-4 text-sm font-semibold text-white hover:bg-primary/90"
+        >
+          View all <ChevronRight className="size-4" aria-hidden />
+        </Link>
       </div>
+      <ProductRail>
+        {products.map((product) => (
+          <li key={product._id} className="w-40 shrink-0 snap-start border-r border-outline-variant/30 sm:w-56">
+            <ProductCard product={product} />
+          </li>
+        ))}
+      </ProductRail>
     </section>
   );
 }

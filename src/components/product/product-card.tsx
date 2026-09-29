@@ -6,36 +6,33 @@ import { cn, formatPriceRange } from "@/lib/utils";
 
 export function ProductCard({ product, className }: { product: Product; className?: string }) {
   const soldOut = product.totalStock <= 0;
+  const lowStock = !soldOut && product.totalStock <= 5;
 
   return (
     <Link
       href={`/product/${product._id}`}
       className={cn(
-        "group flex h-full flex-col rounded-[28px] border border-outline-variant/35 bg-surface p-3.5 shadow-card transition-transform duration-200 hover:-translate-y-1",
+        "group flex h-full flex-col bg-white p-3 transition-shadow hover:shadow-float sm:p-4",
         className,
       )}
     >
       <RemoteImage
         src={product.images[0]?.url}
         alt={product.name}
-        width={600}
-        className="aspect-[1.05] rounded-3xl bg-surface-container-highest/45"
-        imgClassName="transition-transform duration-500 group-hover:scale-105"
+        width={500}
+        sizes="(max-width: 640px) 45vw, 240px"
+        className="aspect-square bg-white"
+        imgClassName="object-contain transition-transform duration-300 group-hover:scale-105"
         fallback={<ShoppingBag className="size-10" aria-hidden />}
       />
-      <div className="flex flex-1 flex-col px-1 pb-1 pt-3.5">
-        <h3 className="t-headline line-clamp-2 text-[1.35rem] font-extrabold leading-tight">
-          {product.name}
-        </h3>
-        <p className="t-body-md mt-2.5 line-clamp-3 text-on-surface-variant">{product.description}</p>
-        <div className="mt-auto flex items-end justify-between gap-2 pt-4">
-          <p className="t-headline text-[1.5rem] font-extrabold">
-            {formatPriceRange(product.minPrice, product.maxPrice)}
-          </p>
-          {soldOut && (
-            <span className="t-caption mb-1 rounded-full bg-error/10 px-2.5 py-1 text-error">Sold out</span>
-          )}
-        </div>
+      <div className="mt-3 flex flex-1 flex-col gap-1">
+        <h3 className="line-clamp-1 text-sm font-medium group-hover:text-primary">{product.name}</h3>
+        <p className="line-clamp-1 text-xs capitalize text-on-surface-variant">{product.category}</p>
+        <p className="mt-auto pt-1 text-base font-semibold">
+          {formatPriceRange(product.minPrice, product.maxPrice)}
+        </p>
+        {soldOut && <p className="text-xs font-semibold text-error">Out of stock</p>}
+        {lowStock && <p className="text-xs font-semibold text-buy">Only {product.totalStock} left</p>}
       </div>
     </Link>
   );

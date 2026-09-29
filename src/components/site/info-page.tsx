@@ -12,16 +12,20 @@ export function InfoPage({
   children?: React.ReactNode;
 }) {
   return (
-    <PageShell title={title} subtitle={intro} width="max-w-3xl">
-      <div className="flex flex-col gap-10">
-        {sections?.map(({ id, heading, body }) => (
-          <section key={heading} id={id} className="scroll-mt-28">
-            <h2 className="t-headline-md !text-2xl">{heading}</h2>
-            <p className="t-body-lg mt-3 text-on-surface-variant">{body}</p>
-          </section>
-        ))}
-        {children}
-      </div>
+    <PageShell width="max-w-3xl">
+      <article className="bg-white p-6 shadow-soft sm:p-10">
+        <h1 className="font-display text-2xl font-bold sm:text-3xl">{title}</h1>
+        <p className="mt-2 text-on-surface-variant">{intro}</p>
+        <div className="mt-8 flex flex-col gap-7">
+          {sections?.map(({ id, heading, body }) => (
+            <section key={heading} id={id} className="scroll-mt-28">
+              <h2 className="font-display text-lg font-semibold">{heading}</h2>
+              <p className="mt-2 leading-relaxed text-on-surface-variant">{body}</p>
+            </section>
+          ))}
+          {children}
+        </div>
+      </article>
     </PageShell>
   );
 }

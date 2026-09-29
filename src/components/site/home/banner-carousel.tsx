@@ -15,21 +15,23 @@ function BannerSlide({ banner, priority }: { banner: Banner; priority: boolean }
       <RemoteImage
         src={banner.imageUrl}
         alt=""
-        width={1200}
+        width={1600}
         priority={priority}
-        sizes="(max-width: 640px) 85vw, (max-width: 1024px) 60vw, 40vw"
+        sizes="(max-width: 1280px) 100vw, 1280px"
         className="absolute inset-0"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
-      <div className="absolute inset-x-0 bottom-0 p-6 text-left sm:p-8">
-        <h3 className="t-headline-lg !text-[clamp(1.5rem,3vw,3rem)] text-white">{banner.title}</h3>
-        <p className="t-body-md mt-2 line-clamp-2 text-white/80">{banner.description}</p>
+      <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent" />
+      <div className="absolute inset-y-0 left-0 flex max-w-[75%] flex-col justify-center p-5 text-left sm:max-w-[55%] sm:p-10">
+        <h3 className="font-display text-xl font-extrabold leading-tight text-white sm:text-3xl lg:text-4xl">
+          {banner.title}
+        </h3>
+        <p className="mt-2 line-clamp-2 text-sm text-white/85 sm:text-base">{banner.description}</p>
       </div>
     </>
   );
 
   const className =
-    "relative block h-60 w-[85vw] shrink-0 snap-center overflow-hidden rounded-3xl bg-surface-container-highest shadow-[0_10px_20px_rgb(0_0_0/0.05)] sm:h-70 sm:w-[60vw] lg:h-80 lg:w-[40vw]";
+    "relative block h-44 w-full shrink-0 snap-center overflow-hidden bg-surface-container-high sm:h-64 lg:h-80";
 
   if (!banner.link) return <li className={className}>{content}</li>;
 
@@ -59,10 +61,7 @@ export function BannerCarousel({ banners }: { banners: Banner[] }) {
     const track = trackRef.current;
     const slide = track?.children[next] as HTMLElement | undefined;
     if (!track || !slide) return;
-    track.scrollTo({
-      left: slide.offsetLeft - (track.clientWidth - slide.clientWidth) / 2,
-      behavior: "smooth",
-    });
+    track.scrollTo({ left: slide.offsetLeft, behavior: "smooth" });
   }, []);
 
   // Keep the dots in sync with whatever slide is centred.
@@ -108,7 +107,7 @@ export function BannerCarousel({ banners }: { banners: Banner[] }) {
     <section
       aria-roledescription="carousel"
       aria-label="Featured"
-      className="relative"
+      className="relative mx-auto max-w-[1280px] overflow-hidden bg-white sm:mt-3 sm:shadow-soft"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -116,7 +115,7 @@ export function BannerCarousel({ banners }: { banners: Banner[] }) {
     >
       <ul
         ref={trackRef}
-        className="scrollbar-none flex snap-x snap-mandatory gap-4 overflow-x-auto px-[7.5vw] py-3 sm:px-[20vw] lg:px-[30vw]"
+        className="scrollbar-none flex snap-x snap-mandatory overflow-x-auto"
       >
         {banners.map((banner, i) => (
           <BannerSlide key={banner._id} banner={banner} priority={i === 0} />
@@ -125,7 +124,7 @@ export function BannerCarousel({ banners }: { banners: Banner[] }) {
 
       {banners.length > 1 && (
         <>
-          <div className="mt-3 flex items-center justify-center gap-2">
+          <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-1.5">
             {banners.map((banner, i) => (
               <button
                 key={banner._id}
@@ -134,8 +133,8 @@ export function BannerCarousel({ banners }: { banners: Banner[] }) {
                 aria-current={i === index}
                 onClick={() => goTo(i)}
                 className={cn(
-                  "h-2 rounded-full transition-all duration-300",
-                  i === index ? "w-6 bg-primary" : "w-2 bg-outline-variant",
+                  "h-1.5 rounded-full transition-all duration-300",
+                  i === index ? "w-5 bg-white" : "w-1.5 bg-white/50",
                 )}
               />
             ))}
@@ -147,8 +146,8 @@ export function BannerCarousel({ banners }: { banners: Banner[] }) {
               aria-label={dir === "prev" ? "Previous slide" : "Next slide"}
               onClick={() => goTo((index + (dir === "prev" ? -1 : 1) + banners.length) % banners.length)}
               className={cn(
-                "absolute top-1/2 hidden size-11 -translate-y-1/2 place-items-center rounded-full bg-surface/90 shadow-card backdrop-blur hover:bg-surface lg:grid",
-                dir === "prev" ? "left-[2vw]" : "right-[2vw]",
+                "absolute top-1/2 hidden h-20 w-10 -translate-y-1/2 place-items-center bg-white/90 shadow-card hover:bg-white md:grid",
+                dir === "prev" ? "left-0 rounded-r-sm" : "right-0 rounded-l-sm",
               )}
             >
               {dir === "prev" ? <ChevronLeft /> : <ChevronRight />}

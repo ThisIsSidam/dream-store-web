@@ -87,8 +87,7 @@ export function SearchBox({ className, autoFocus }: { className?: string; autoFo
 
   return (
     <div ref={rootRef} className={cn("relative", className)}>
-      <div className="flex h-[46px] items-center gap-2.5 rounded-[14px] border border-outline-variant/60 bg-surface-container-highest px-3.5 focus-within:ring-2 focus-within:ring-primary-container/40">
-        <Search className="size-5 shrink-0 text-on-surface-variant" aria-hidden />
+      <div className="flex h-10 items-center rounded-sm bg-white pl-4 shadow-soft focus-within:shadow-float">
         <input
           type="search"
           role="combobox"
@@ -105,8 +104,8 @@ export function SearchBox({ className, autoFocus }: { className?: string; autoFo
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Search products..."
-          className="t-body-md min-w-0 flex-1 bg-transparent text-on-surface outline-none placeholder:text-on-surface-variant [&::-webkit-search-cancel-button]:hidden"
+          placeholder="Search for products"
+          className="min-w-0 flex-1 bg-transparent text-sm text-on-surface outline-none placeholder:text-on-surface-variant [&::-webkit-search-cancel-button]:hidden"
         />
         {value && (
           <button
@@ -118,13 +117,21 @@ export function SearchBox({ className, autoFocus }: { className?: string; autoFo
             }}
             className="grid size-8 place-items-center rounded-full text-on-surface-variant hover:bg-surface-container-high"
           >
-            <X className="size-5" />
+            <X className="size-4" />
           </button>
         )}
+        <button
+          type="button"
+          aria-label="Search"
+          onClick={() => submit()}
+          className="grid h-full w-11 shrink-0 place-items-center text-primary"
+        >
+          <Search className="size-5" aria-hidden />
+        </button>
       </div>
 
       {showList && (
-        <div className="absolute inset-x-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-[18px] bg-surface py-2 shadow-[0_16px_40px_rgb(0_0_0/0.14)] ring-1 ring-outline-variant/40">
+        <div className="absolute inset-x-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-sm bg-white py-1 shadow-float">
           <ul id={listId} role="listbox" className="max-h-80 overflow-y-auto">
             {visible.map((product, i) => (
               <li
@@ -147,7 +154,7 @@ export function SearchBox({ className, autoFocus }: { className?: string; autoFo
                 >
                   <Search className="size-4 shrink-0 text-on-surface-variant" aria-hidden />
                   <span className="min-w-0 flex-1">
-                    <span className="t-body-md block truncate text-on-surface">{product.name}</span>
+                    <span className="block truncate text-sm text-on-surface">{product.name}</span>
                     <span className="block truncate text-xs capitalize text-on-surface-variant">
                       {product.category}
                     </span>

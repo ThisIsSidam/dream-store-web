@@ -9,41 +9,45 @@ export function Newsletter() {
   const [state, action, pending] = useActionState(subscribe, undefined);
 
   useEffect(() => {
-    if (state?.ok) toast.success("The paradox will find you.");
+    if (state?.ok) toast.success("Thanks for subscribing!");
   }, [state]);
 
   return (
-    <section className="px-6 py-20 md:px-8">
-      <div className="mx-auto max-w-7xl rounded-[400px_200px_350px_150px/200px_150px_200px_350px] max-md:rounded-[40px] bg-primary-container/20 px-6 py-16 text-center md:px-12 md:py-20">
-        <h2 className="t-headline-lg text-primary">Subscribe to the Paradox</h2>
-        <p className="t-body-lg mx-auto mt-8 max-w-xl text-on-primary-container/80">
-          Get notified when we capture new impossibilities. No spam, just weirdness.
-        </p>
-        <form action={action} className="mx-auto mt-12 flex max-w-lg flex-col gap-4 sm:flex-row">
-          <label htmlFor="newsletter-email" className="sr-only">
-            Email address
-          </label>
-          <input
-            id="newsletter-email"
-            name="email"
-            type="email"
-            required
-            maxLength={254}
-            defaultValue={state?.email}
-            aria-invalid={state?.error ? true : undefined}
-            aria-describedby={state?.error ? "newsletter-error" : undefined}
-            placeholder="Your inter-dimensional email"
-            className="t-body-md h-16 min-w-0 flex-1 rounded-full border-4 border-primary bg-surface-container-lowest px-8 outline-none placeholder:text-on-surface-variant/60 focus:ring-4 focus:ring-primary-container/40"
-          />
-          <Button type="submit" size="xl" className="h-16" loading={pending}>
-            Get Weird
-          </Button>
-        </form>
-        {state?.error && (
-          <p id="newsletter-error" role="alert" className="t-label mt-4 text-error">
-            {state.error}
+    <section className="bg-white shadow-soft">
+      <div className="mx-auto flex max-w-[1280px] flex-col gap-4 px-4 py-6 md:flex-row md:items-center md:justify-between md:gap-10">
+        <div>
+          <h2 className="font-display text-lg font-bold">Get new arrivals in your inbox</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">
+            Occasional emails about new products. Nothing else.
           </p>
-        )}
+        </div>
+        <div className="w-full md:max-w-md">
+          <form action={action} className="flex">
+            <label htmlFor="newsletter-email" className="sr-only">
+              Email address
+            </label>
+            <input
+              id="newsletter-email"
+              name="email"
+              type="email"
+              required
+              maxLength={254}
+              defaultValue={state?.email}
+              aria-invalid={state?.error ? true : undefined}
+              aria-describedby={state?.error ? "newsletter-error" : undefined}
+              placeholder="Enter your email"
+              className="h-11 min-w-0 flex-1 rounded-l-sm border border-r-0 border-outline-variant px-4 text-sm outline-none placeholder:text-on-surface-variant/60 focus:border-primary"
+            />
+            <Button type="submit" className="h-11 rounded-l-none" loading={pending}>
+              Subscribe
+            </Button>
+          </form>
+          {state?.error && (
+            <p id="newsletter-error" role="alert" className="mt-2 text-sm text-error">
+              {state.error}
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );

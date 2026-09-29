@@ -38,14 +38,14 @@ export function Dialog({
         if (event.target === ref.current) onClose();
       }}
       className={cn(
-        "m-auto w-[min(92vw,28rem)] rounded-3xl bg-surface p-0 text-on-surface shadow-float backdrop:bg-on-surface/40 backdrop:backdrop-blur-sm",
+        "m-auto w-[min(92vw,28rem)] rounded-md bg-white p-0 text-on-surface shadow-float backdrop:bg-on-surface/50",
         className,
       )}
     >
       {open && (
         <div className="p-6 sm:p-8">
           <div className="flex items-start justify-between gap-4">
-            <h2 className="t-headline">{title}</h2>
+            <h2 className="font-display text-lg font-bold">{title}</h2>
             <button
               type="button"
               onClick={onClose}
@@ -100,7 +100,7 @@ export function ConfirmDialog({
         </>
       }
     >
-      <p className="t-body-md text-on-surface-variant">{message}</p>
+      <p className="text-sm text-on-surface-variant">{message}</p>
     </Dialog>
   );
 }

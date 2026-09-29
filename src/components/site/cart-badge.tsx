@@ -9,7 +9,7 @@ export function CartBadge({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "t-caption absolute grid min-h-4 min-w-4 place-items-center rounded-full border-[1.5px] border-surface bg-primary px-1 text-[9px] leading-none text-on-primary",
+        "t-caption absolute grid min-h-4 min-w-4 place-items-center rounded-full border border-white bg-cta px-1 text-[10px] leading-none text-white",
         className,
       )}
       aria-label={`${itemCount} items in cart`}

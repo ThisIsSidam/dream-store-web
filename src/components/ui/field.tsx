@@ -22,9 +22,9 @@ export function Field({ label, icon: Icon, error, labelAction, className, type, 
   return (
     <div className={className}>
       {(label || labelAction) && (
-        <div className="mb-2.5 flex items-center justify-between px-0.5">
+        <div className="mb-1.5 flex items-center justify-between">
           {label && (
-            <label htmlFor={id} className="t-label text-on-surface">
+            <label htmlFor={id} className="text-sm font-semibold text-on-surface">
               {label}
             </label>
           )}
@@ -34,7 +34,7 @@ export function Field({ label, icon: Icon, error, labelAction, className, type, 
       <div className="relative">
         {Icon && (
           <Icon
-            className="pointer-events-none absolute left-5 top-1/2 size-5 -translate-y-1/2 text-on-surface-variant"
+            className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-on-surface-variant"
             aria-hidden
           />
         )}
@@ -44,9 +44,9 @@ export function Field({ label, icon: Icon, error, labelAction, className, type, 
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}
           className={cn(
-            "t-body-md h-14 w-full rounded-full border-[1.6px] border-outline-variant/85 bg-surface-container-low px-5 text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/60 focus:border-primary-container focus:ring-2 focus:ring-primary-container/30",
-            Icon && "pl-13",
-            isPassword && "pr-13",
+            "h-12 w-full rounded-sm border border-outline-variant bg-white px-4 text-[15px] text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/60 focus:border-primary focus:ring-1 focus:ring-primary",
+            Icon && "pl-12",
+            isPassword && "pr-12",
             error && "border-error",
           )}
           {...props}
@@ -63,7 +63,7 @@ export function Field({ label, icon: Icon, error, labelAction, className, type, 
         )}
       </div>
       {error && (
-        <p id={`${id}-error`} className="mt-1.5 px-2 text-sm text-error" role="alert">
+        <p id={`${id}-error`} className="mt-1 text-sm text-error" role="alert">
           {error}
         </p>
       )}

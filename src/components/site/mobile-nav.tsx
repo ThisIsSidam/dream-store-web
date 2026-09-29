@@ -6,16 +6,16 @@ import { CartBadge } from "./cart-badge";
 import { navItems } from "./nav-config";
 import { cn } from "@/lib/utils";
 
-/** Bottom tab bar, shown below the 620px breakpoint (like the Flutter NavigationBar). */
+/** Bottom tab bar, shown below the 620px breakpoint. */
 export function MobileNav() {
   const pathname = usePathname();
 
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-outline-variant/40 bg-surface pb-[env(safe-area-inset-bottom)] xs:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-outline-variant/60 bg-white pb-[env(safe-area-inset-bottom)] xs:hidden"
     >
-      <ul className="grid h-[72px] grid-cols-4">
+      <ul className="grid h-14 grid-cols-4">
         {navItems.map(({ href, label, icon: Icon, match }) => {
           const active = match(pathname);
           return (
@@ -23,20 +23,16 @@ export function MobileNav() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className="flex h-full flex-col items-center justify-center gap-1"
+                className={cn(
+                  "flex h-full flex-col items-center justify-center gap-0.5",
+                  active ? "text-primary" : "text-on-surface-variant",
+                )}
               >
-                <span
-                  className={cn(
-                    "relative grid h-8 w-16 place-items-center rounded-full transition-colors",
-                    active ? "bg-primary-container/36 text-on-surface" : "text-on-surface-variant",
-                  )}
-                >
+                <span className="relative">
                   <Icon className="size-6" aria-hidden />
-                  {href === "/cart" && <CartBadge className="right-2.5 top-0" />}
+                  {href === "/cart" && <CartBadge className="-right-2 -top-1.5" />}
                 </span>
-                <span className={cn("text-xs", active ? "font-bold text-on-surface" : "text-on-surface-variant")}>
-                  {label}
-                </span>
+                <span className={cn("text-[11px]", active && "font-bold")}>{label}</span>
               </Link>
             </li>
           );

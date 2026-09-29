@@ -6,29 +6,29 @@ export function CategoryStrip({ categories }: { categories: Category[] }) {
   if (categories.length === 0) return null;
 
   return (
-    <section className="px-6 py-6 md:px-8">
-      <div className="mx-auto max-w-7xl">
-        <h2 className="t-headline">Categories</h2>
-        <ul className="scrollbar-none -mx-2 mt-4 flex gap-6 overflow-x-auto px-2 pb-2">
-          {categories.map((category) => (
-            <li key={category._id} className="shrink-0">
-              <Link
-                href={`/products?category=${encodeURIComponent(category.name)}`}
-                className="group flex w-20 flex-col items-center gap-2 text-center"
-              >
-                <RemoteImage
-                  src={category.imageUrl}
-                  alt=""
-                  width={160}
-                  sizes="60px"
-                  className="size-[60px] rounded-full bg-surface-container-highest ring-0 ring-primary-container transition-shadow group-hover:ring-4"
-                />
-                <span className="t-body-md w-full truncate capitalize">{category.name}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
+    <section aria-label="Shop by category" className="bg-white shadow-soft">
+      <ul className="scrollbar-none mx-auto flex max-w-[1280px] gap-2 overflow-x-auto px-2 py-3 sm:justify-center sm:gap-6 sm:py-4">
+        {categories.map((category) => (
+          <li key={category._id} className="shrink-0">
+            <Link
+              href={`/products?category=${encodeURIComponent(category.name)}`}
+              className="group flex w-20 flex-col items-center gap-2 text-center sm:w-24"
+            >
+              <RemoteImage
+                src={category.imageUrl}
+                alt=""
+                width={200}
+                sizes="72px"
+                className="size-14 rounded-full bg-surface-container-high sm:size-[72px]"
+                imgClassName="transition-transform duration-300 group-hover:scale-110"
+              />
+              <span className="w-full truncate text-xs font-semibold capitalize group-hover:text-primary sm:text-sm">
+                {category.name}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
