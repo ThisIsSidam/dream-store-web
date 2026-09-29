@@ -1,24 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ImageOff, Minus, Plus, Star } from "lucide-react";
+import { ImageOff, Minus, Plus, ShoppingCart, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/errors";
 import type { Order, Product, Variant } from "@/lib/api/types";
 import { api } from "@/lib/client/api";
 import { useCart } from "@/lib/client/use-cart";
-import { cn, formatPrice, formatPriceRange, hashString, optimizeImage } from "@/lib/utils";
-
-const specs = [
-  ["Weight", "Theoretical"],
-  ["Origin", "29,032ft+"],
-  ["Shelf Life", "Eternal"],
-  ["Legality", "Questionable"],
-] as const;
+import { cn, formatPrice, formatPriceRange, optimizeImage } from "@/lib/utils";
 
 const variantLabel = (variant: Variant, index: number) => {
   const values = Object.values(variant.attributes ?? {});
@@ -46,7 +38,6 @@ export function ProductDetail({ product, variants }: { product: Product; variant
   const soldOut = !variant || variant.stock <= 0;
   const maxQuantity = Math.max(1, variant?.stock ?? 1);
   const price = variant ? formatPrice(variant.price) : formatPriceRange(product.minPrice, product.maxPrice);
-  const starCredits = Math.trunc((variant?.price ?? product.minPrice ?? 100) * 4);
 
   function selectVariant(id: string) {
     setVariantId(id);
@@ -58,7 +49,7 @@ export function ProductDetail({ product, variants }: { product: Product; variant
     setBusy("cart");
     try {
       await changeQuantity(variant._id, product.name, quantity);
-      toast.success(`Added ${quantity} ${quantity === 1 ? "item" : "items"} to your Wonder Basket`, {
+      toast.success(`Added ${quantity} ${quantity === 1 ? "item" : "items"} to your cart`, {
         action: { label: "View cart", onClick: () => router.push("/cart") },
       });
     } catch (error) {
@@ -89,11 +80,38 @@ export function ProductDetail({ product, variants }: { product: Product; variant
   }
 
   return (
-    <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
-      {/* Gallery */}
-      <div>
-        <div className="relative">
-          <div className="blob-gallery relative h-[320px] overflow-hidden bg-secondary-container/30 shadow-[0_15px_30px_rgb(0_0_0/0.05)] sm:h-[380px]">
+    <div className="grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      {/* Gallery + purchase buttons (sticky on desktop) */}
+      <div className="p-4 lg:sticky lg:top-16 lg:self-start lg:p-5">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row">
+          {images.length > 1 && (
+            <ul className="scrollbar-none flex gap-2 overflow-x-auto sm:max-h-[420px] sm:w-16 sm:shrink-0 sm:flex-col sm:overflow-y-auto sm:overflow-x-hidden">
+              {images.map((image, index) => (
+                <li key={image.id} className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setImageIndex(index)}
+                    aria-label={`Show image ${index + 1}`}
+                    aria-current={index === imageIndex}
+                    className={cn(
+                      "relative block size-14 overflow-hidden border-2 bg-white sm:size-16",
+                      index === imageIndex ? "border-primary" : "border-outline-variant/60 hover:border-outline",
+                    )}
+                  >
+                    <Image
+                      src={optimizeImage(image.url, 200) ?? image.url}
+                      alt=""
+                      fill
+                      unoptimized
+                      sizes="64px"
+                      className="object-contain"
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="relative aspect-square min-w-0 flex-1 border border-outline-variant/40 bg-white sm:max-h-[420px]">
             {mainImage ? (
               <Image
                 src={mainImage}
@@ -101,8 +119,8 @@ export function ProductDetail({ product, variants }: { product: Product; variant
                 fill
                 unoptimized
                 priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 40vw"
+                className="object-contain"
               />
             ) : (
               <div className="grid size-full place-items-center text-outline">
@@ -110,84 +128,55 @@ export function ProductDetail({ product, variants }: { product: Product; variant
               </div>
             )}
           </div>
-          <span className="t-label absolute right-4 top-4 rotate-[8.6deg] rounded-full bg-tertiary-container px-4 py-2 text-on-tertiary-container shadow-[0_4px_10px_rgb(0_0_0/0.1)]">
-            Actually Impossible
-          </span>
         </div>
 
-        {images.length > 1 && (
-          <ul className="scrollbar-none mt-6 flex gap-4 overflow-x-auto p-1">
-            {images.map((image, index) => (
-              <li key={image.id} className="shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setImageIndex(index)}
-                  aria-label={`Show image ${index + 1}`}
-                  aria-current={index === imageIndex}
-                  className={cn(
-                    "relative block size-20 overflow-hidden border-[3px] bg-surface-container-highest transition-colors",
-                    index % 2 === 0 ? "blob-thumb-a" : "blob-thumb-b",
-                    index === imageIndex ? "border-primary" : "border-transparent",
-                  )}
-                >
-                  <Image
-                    src={optimizeImage(image.url, 200) ?? image.url}
-                    alt=""
-                    fill
-                    unoptimized
-                    sizes="80px"
-                    className="object-cover"
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="mt-4 grid grid-cols-2 gap-3 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-14 xs:max-lg:bottom-0 max-lg:z-30 max-lg:mt-0 max-lg:gap-0 max-lg:shadow-float">
+          <Button
+            variant="cta"
+            size="xl"
+            className="max-lg:rounded-none"
+            disabled={soldOut || busy === "buy"}
+            loading={busy === "cart"}
+            onClick={addToCart}
+          >
+            <ShoppingCart className="size-5" aria-hidden /> Add to cart
+          </Button>
+          <Button
+            variant="buy"
+            size="xl"
+            className="max-lg:rounded-none"
+            disabled={soldOut || busy === "cart"}
+            loading={busy === "buy"}
+            onClick={buyNow}
+          >
+            <Zap className="size-5" aria-hidden /> Buy now
+          </Button>
+        </div>
       </div>
 
       {/* Details */}
-      <div>
-        <p className="t-label tracking-[2px] text-secondary">
-          {product.category.toUpperCase()} {"//"} 00{hashString(product._id) % 10}
-        </p>
-        <h1 className="mt-3 font-display text-[2rem] font-extrabold leading-[1.1] sm:text-5xl">{product.name}</h1>
+      <div className="p-4 pb-20 lg:p-6 lg:pb-6">
+        <h1 className="font-display text-xl font-semibold leading-snug sm:text-2xl">{product.name}</h1>
+        <p className="mt-1 text-sm capitalize text-on-surface-variant">{product.category}</p>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <div className="flex" aria-label="5 out of 5 stars" role="img">
-            {Array.from({ length: 5 }, (_, i) => (
-              <Star key={i} className="size-5 fill-tertiary text-tertiary" aria-hidden />
-            ))}
-          </div>
-          <span className="t-body-md text-on-surface-variant">1 Verified Review (Literate Goat)</span>
-        </div>
+        <p className="mt-4 text-3xl font-semibold">{price}</p>
 
-        <p className="t-body-lg mt-6 whitespace-pre-line">{product.description}</p>
-
-        <div className="mt-8 rounded-3xl bg-surface-container-highest/50 p-6 sm:p-8">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="t-label text-on-surface-variant">INVESTMENT</p>
-              <p className="mt-1 font-display text-[2rem] font-extrabold text-primary">{price}</p>
-            </div>
-            <div className="text-right">
-              <p className="t-label text-on-surface-variant">STAR CREDITS</p>
-              <p className="mt-1 font-display text-2xl font-bold text-tertiary">{starCredits} SC</p>
-            </div>
-          </div>
-          <dl className="mt-6 grid grid-cols-2 gap-3">
-            {specs.map(([label, value]) => (
-              <div key={label} className="rounded-xl border-[1.5px] border-outline/10 bg-surface/60 px-3 py-2">
-                <dt className="t-caption text-[10px] uppercase text-on-surface-variant">{label}</dt>
-                <dd className="mt-0.5 text-sm font-bold">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
+        {variant && (
+          <p
+            className={cn(
+              "mt-2 text-sm font-semibold",
+              soldOut ? "text-error" : variant.stock <= 5 ? "text-buy" : "text-success",
+            )}
+          >
+            {soldOut ? "Out of stock" : variant.stock <= 5 ? `Only ${variant.stock} left` : "In stock"}
+          </p>
+        )}
 
         {variants.length > 0 && !isDefaultOnly(variants) && (
-          <fieldset className="mt-6">
-            <legend className="t-headline mb-3">Select Variant</legend>
-            <div className="flex flex-wrap gap-3">
+          <fieldset className="mt-6 flex gap-6">
+            <legend className="sr-only">Options</legend>
+            <span className="w-20 shrink-0 pt-2 text-sm font-semibold text-on-surface-variant">Options</span>
+            <div className="flex flex-wrap gap-2.5">
               {variants.map((v, index) => {
                 const selected = v._id === variantId;
                 return (
@@ -197,11 +186,11 @@ export function ProductDetail({ product, variants }: { product: Product; variant
                     onClick={() => selectVariant(v._id)}
                     aria-pressed={selected}
                     className={cn(
-                      "t-body-md rounded-full border px-4 py-2.5 transition-colors",
+                      "min-w-16 rounded-sm border px-4 py-2 text-sm transition-colors",
                       selected
-                        ? "border-primary-container bg-primary-container/25 font-semibold"
-                        : "border-outline/40 hover:bg-surface-container-high",
-                      v.stock <= 0 && "opacity-50",
+                        ? "border-primary font-semibold text-primary"
+                        : "border-outline-variant hover:border-primary",
+                      v.stock <= 0 && "text-on-surface-variant/60 line-through",
                     )}
                   >
                     {variantLabel(v, index)}
@@ -212,24 +201,22 @@ export function ProductDetail({ product, variants }: { product: Product; variant
           </fieldset>
         )}
 
-        {variant && (
-          <p className={cn("mt-4 text-sm font-semibold", soldOut ? "text-error" : variant.stock <= 5 ? "text-tertiary" : "text-secondary")}>
-            {soldOut ? "Sold out" : variant.stock <= 5 ? `Only ${variant.stock} left` : "In stock"}
-          </p>
-        )}
-
-        <div className="mt-6 flex items-center gap-4">
-          <div className="flex items-center rounded-full border-2 border-on-surface/80 bg-surface-container-highest px-3 py-1">
+        <div className="mt-6 flex items-center gap-6">
+          <span className="w-20 shrink-0 text-sm font-semibold text-on-surface-variant">Quantity</span>
+          <div className="flex items-center">
             <button
               type="button"
               aria-label="Decrease quantity"
               disabled={quantity <= 1}
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="grid size-8 place-items-center rounded-full hover:bg-surface-container-high disabled:opacity-40"
+              className="grid size-9 place-items-center rounded-l-sm border border-outline-variant hover:bg-surface-container-low disabled:opacity-40"
             >
               <Minus className="size-4" />
             </button>
-            <output aria-live="polite" className="w-8 text-center font-bold">
+            <output
+              aria-live="polite"
+              className="grid h-9 w-12 place-items-center border-y border-outline-variant text-sm font-semibold"
+            >
               {quantity}
             </output>
             <button
@@ -237,43 +224,19 @@ export function ProductDetail({ product, variants }: { product: Product; variant
               aria-label="Increase quantity"
               disabled={quantity >= maxQuantity}
               onClick={() => setQuantity((q) => Math.min(maxQuantity, q + 1))}
-              className="grid size-8 place-items-center rounded-full hover:bg-surface-container-high disabled:opacity-40"
+              className="grid size-9 place-items-center rounded-r-sm border border-outline-variant hover:bg-surface-container-low disabled:opacity-40"
             >
               <Plus className="size-4" />
             </button>
           </div>
-          <Button
-            variant="accent"
-            size="lg"
-            className="flex-1"
-            disabled={soldOut || busy === "buy"}
-            loading={busy === "cart"}
-            onClick={addToCart}
-          >
-            Add to Wonder Basket
-          </Button>
         </div>
 
-        <Button
-          variant="outline"
-          size="lg"
-          className="mt-4 w-full"
-          disabled={soldOut || busy === "cart"}
-          loading={busy === "buy"}
-          onClick={buyNow}
-        >
-          Buy Now
-        </Button>
-
-        <p className="t-caption mt-4 text-center font-bold text-on-surface-variant/70">
-          † Shipping subject to weather patterns and bird migration.
-        </p>
-        <p className="mt-3 text-center text-sm text-on-surface-variant">
-          Not sure yet?{" "}
-          <Link href="/categories" className="font-semibold text-primary hover:underline">
-            Keep browsing
-          </Link>
-        </p>
+        <section className="mt-8 border-t border-outline-variant/40 pt-6">
+          <h2 className="font-display text-lg font-semibold">Description</h2>
+          <p className="mt-2 whitespace-pre-line leading-relaxed text-on-surface-variant">
+            {product.description || "No description provided."}
+          </p>
+        </section>
       </div>
     </div>
   );
