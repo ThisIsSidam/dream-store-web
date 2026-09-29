@@ -2,8 +2,8 @@ import type { Product } from "./api/types";
 
 export const sortOptions = [
   { value: "relevance", label: "Relevance" },
-  { value: "price-asc", label: "Price: Low to High" },
-  { value: "price-desc", label: "Price: High to Low" },
+  { value: "price-asc", label: "Price — Low to High" },
+  { value: "price-desc", label: "Price — High to Low" },
   { value: "newest", label: "Newest" },
 ] as const;
 
@@ -47,4 +47,28 @@ export function parsePage(value: string | string[] | undefined) {
   const raw = Array.isArray(value) ? value[0] : value;
   const n = Number.parseInt(raw ?? "", 10);
   return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+export type ListingFilters = { min?: number; max?: number; inStock: boolean };
+
+function parsePrice(value: string | string[] | undefined) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const n = Number.parseFloat(raw ?? "");
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
+export function parseFilters(sp: Record<string, string | string[] | undefined>): ListingFilters {
+  return { min: parsePrice(sp.min), max: parsePrice(sp.max), inStock: sp.stock === "1" };
+}
+
+/** Keeps products whose price range overlaps [min, max]. */
+export function filterProducts(products: Product[], { min, max, inStock }: ListingFilters) {
+  return products.filter((product) => {
+    if (inStock && product.totalStock <= 0) return false;
+    const low = product.minPrice ?? product.maxPrice ?? 0;
+    const high = product.maxPrice ?? low;
+    if (min !== undefined && high < min) return false;
+    if (max !== undefined && low > max) return false;
+    return true;
+  });
 }

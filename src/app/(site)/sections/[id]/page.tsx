@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { PageShell } from "@/components/site/page-shell";
 import { ProductListing } from "@/components/product/product-listing";
 import { getSection } from "@/lib/api/catalog";
-import { parsePage, parseSort } from "@/lib/products";
+import { parseFilters, parsePage, parseSort } from "@/lib/products";
 
 export async function generateMetadata({ params }: PageProps<"/sections/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -22,12 +22,14 @@ export default async function SectionPage({ params, searchParams }: PageProps<"/
   const products = section.items.flatMap((item) => (item.productId ? [item.productId] : []));
 
   return (
-    <PageShell title={section.title} subtitle="A curated shelf from the back of the void.">
+    <PageShell>
       <ProductListing
-        heading={`${products.length} ${products.length === 1 ? "impossibility" : "impossibilities"}`}
+        title={section.title}
+        crumbs={[{ label: "Home", href: "/" }, { label: section.title }]}
         products={products}
         sort={parseSort(sp.sort)}
         page={parsePage(sp.page)}
+        filters={parseFilters(sp)}
         pathname={`/sections/${id}`}
       />
     </PageShell>

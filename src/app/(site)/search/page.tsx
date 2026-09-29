@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Search, Smile } from "lucide-react";
+import { Search } from "lucide-react";
 import { connection } from "next/server";
 import { PageShell } from "@/components/site/page-shell";
 import { ProductListing } from "@/components/product/product-listing";
 import { EmptyState } from "@/components/ui/state";
 import { searchProducts } from "@/lib/api/catalog";
-import { parsePage, parseSort } from "@/lib/products";
+import { parseFilters, parsePage, parseSort } from "@/lib/products";
 
 export async function generateMetadata({ searchParams }: PageProps<"/search">): Promise<Metadata> {
   const { q } = await searchParams;
@@ -32,19 +32,19 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   const products = await searchProducts(q);
 
   return (
-    <PageShell title="Search" subtitle={`${products.length} result${products.length === 1 ? "" : "s"} for “${q}”`}>
-      {products.length === 0 ? (
-        <EmptyState icon={Smile} title={`No results for “${q}”`} message="Try different keywords." />
-      ) : (
-        <ProductListing
-          heading="Results"
-          products={products}
-          sort={parseSort(sp.sort)}
-          page={parsePage(sp.page)}
-          pathname="/search"
-          params={{ q }}
-        />
-      )}
+    <PageShell>
+      <ProductListing
+        title={`Results for “${q}”`}
+        crumbs={[{ label: "Home", href: "/" }, { label: "Search" }]}
+        products={products}
+        sort={parseSort(sp.sort)}
+        page={parsePage(sp.page)}
+        filters={parseFilters(sp)}
+        pathname="/search"
+        params={{ q }}
+        emptyTitle={`No results for “${q}”`}
+        emptyMessage="Check the spelling or try different keywords."
+      />
     </PageShell>
   );
 }

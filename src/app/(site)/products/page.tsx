@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { PageShell } from "@/components/site/page-shell";
 import { ProductListing } from "@/components/product/product-listing";
-import { getAllProducts, getProductsByCategory } from "@/lib/api/catalog";
-import { parsePage, parseSort } from "@/lib/products";
+import { getAllProducts, getCategories, getProductsByCategory } from "@/lib/api/catalog";
+import { parseFilters, parsePage, parseSort } from "@/lib/products";
 
 export async function generateMetadata({ searchParams }: PageProps<"/products">): Promise<Metadata> {
   const { category } = await searchParams;
@@ -14,25 +14,29 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
   await connection();
   const sp = await searchParams;
   const category = typeof sp.category === "string" ? sp.category.trim() : "";
-  const sort = parseSort(sp.sort);
-  const page = parsePage(sp.page);
 
-  const products = category ? await getProductsByCategory(category) : await getAllProducts();
+  const [products, categories] = await Promise.all([
+    category ? getProductsByCategory(category) : getAllProducts(),
+    getCategories().catch(() => []),
+  ]);
 
   return (
-    <PageShell
-      title={category ? category : "Everything"}
-      subtitle={category ? "Handpicked from this corridor of unreality." : "Every impossibility we currently stock."}
-      className="[&_h1]:capitalize"
-    >
+    <PageShell>
       <ProductListing
-        heading={category ? `Showing results for “${category}”` : "Showing all products"}
+        title={category || "All products"}
+        crumbs={[
+          { label: "Home", href: "/" },
+          ...(category
+            ? [{ label: "Products", href: "/products" }, { label: category }]
+            : [{ label: "Products" }]),
+        ]}
         products={products}
-        sort={sort}
-        page={page}
+        sort={parseSort(sp.sort)}
+        page={parsePage(sp.page)}
+        filters={parseFilters(sp)}
         pathname="/products"
         params={{ category: category || undefined }}
-        emptyTitle="No products found"
+        categories={categories.map((c) => c.name)}
         emptyMessage={category ? `Nothing is filed under “${category}” yet.` : undefined}
       />
     </PageShell>
