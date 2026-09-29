@@ -1,9 +1,8 @@
 @import "tailwindcss";
 
 /*
- * Design tokens carried over from the Flutter app (core/theme/app_theme.dart).
- * The surface-container ramp is interpolated between `surface` and
- * `surface-variant` (the Flutter theme left most of those unset).
+ * Design tokens. The brand colours come from the Flutter app; surfaces and outlines
+ * were retuned to a neutral grey palette for the store look.
  */
 @theme {
   --color-surface: #f1f3f6;
@@ -50,28 +49,8 @@
 
   --breakpoint-xs: 620px;
 
-  --animate-float: float 3s ease-in-out infinite alternate;
-  --animate-fade-up: fade-up 0.35s ease-out both;
   --animate-shimmer: shimmer 1.4s ease-in-out infinite;
 
-  @keyframes float {
-    from {
-      transform: translateY(0);
-    }
-    to {
-      transform: translateY(-20px);
-    }
-  }
-  @keyframes fade-up {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
   @keyframes shimmer {
     0%,
     100% {
@@ -119,38 +98,6 @@ body {
   }
 }
 
-/* Typography scale (AppText in the Flutter app) */
-@utility t-display {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(2.75rem, 7vw, 5rem);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
-}
-@utility t-headline-lg {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1.17;
-  letter-spacing: -0.02em;
-}
-@utility t-headline-md {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 2rem;
-  line-height: 1.25;
-}
-@utility t-headline {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.5rem;
-  line-height: 1.3;
-}
-@utility t-body-lg {
-  font-family: var(--font-sans);
-  font-size: 1.25rem;
-  line-height: 1.6;
-}
 @utility t-body-md {
   font-family: var(--font-sans);
   font-size: 1rem;
@@ -169,7 +116,7 @@ body {
   line-height: 1.33;
 }
 
-/* The organic "blob" corners used across the Flutter UI */
+/* Organic blob corners, still used on the admin dashboard */
 @utility blob-a {
   border-radius: 60% 40% 55% 45% / 55% 45% 60% 40%;
 }
@@ -179,17 +126,6 @@ body {
 @utility blob-c {
   border-radius: 55% 45% 40% 60% / 60% 40% 50% 50%;
 }
-@utility blob-hero {
-  border-radius: 300px 200px 350px 150px / 200px 150px 200px 350px;
-}
-
-@utility container-page {
-  margin-inline: auto;
-  width: 100%;
-  max-width: 80rem;
-  padding-inline: 1.5rem;
-}
-
 @utility scrollbar-none {
   scrollbar-width: none;
   &::-webkit-scrollbar {
@@ -197,13 +133,3 @@ body {
   }
 }
 
-/* Product gallery shapes (elliptical corners from product_detail_screen.dart) */
-@utility blob-gallery {
-  border-radius: 180px 120px 210px 90px / 120px 90px 120px 210px;
-}
-@utility blob-thumb-a {
-  border-radius: 40px 60px 30px 50px / 60px 70px 50px 30px;
-}
-@utility blob-thumb-b {
-  border-radius: 60px 40px 70px 30px / 40px 30px 40px 70px;
-}

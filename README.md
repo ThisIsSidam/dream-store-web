@@ -51,7 +51,9 @@ Browser ──► Next.js (this app) ──► Node backend ──► MongoDB
 
 **Caching.** Public catalogue reads are cached for 60s and expired on demand when an admin edits something (`updateTag`). Anything user-specific is uncached.
 
-**Branding.** Names live in [`src/config/site.ts`](src/config/site.ts); colours and type in [`src/app/globals.css`](src/app/globals.css) (ported from the Flutter theme).
+**Look.** The storefront follows a traditional marketplace layout: red header with wide search, category bar, white panels on a light grey page, orange Add to cart / Buy now buttons, a "Price details" panel in the cart and checkout, and a dark footer. Product pages show only real data (price, stock, description); there are no ratings or "% off" badges because the backend has neither.
+
+**Branding.** Names live in [`src/config/site.ts`](src/config/site.ts); colours and type in [`src/app/globals.css`](src/app/globals.css) (brand colours from the Flutter theme).
 
 ## Layout
 
