@@ -10,6 +10,11 @@ export const siteConfig = {
   tagline: "Own What Shouldn't Be Owned.",
   description:
     "Premium bottled experiences, certified feelings, and other essentials for the discerning absurd-ist.",
+  /**
+   * Where customers can reach you. Leave empty until you have one; the support
+   * page shows a "stand-in" notice while this is unset.
+   */
+  supportEmail: "" as string,
   currency: "USD",
   locale: "en-US",
 } as const;

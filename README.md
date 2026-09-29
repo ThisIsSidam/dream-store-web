@@ -5,7 +5,7 @@ Flutter web app (`dream_store`) and the Angular dashboard (`dream-dashboard`).
 The Node backend (`imagination-store`) is unchanged and stays a separate service.
 
 - **Storefront** - home, categories, product lists, search, product page, cart, checkout, orders, account, sign in / up, info pages.
-- **Dashboard** - `/admin/*`: products (+ variants and images), users, orders, carts, and home-page content (banners, categories, sections). Admin role only.
+- **Dashboard** - `/admin/*`: products (+ variants and images), users, orders, carts, newsletter subscribers, and home-page content (banners, categories, sections). Admin role only.
 
 ## Run it
 
@@ -73,8 +73,7 @@ src/
 
 ## Known gaps (backend or product decisions)
 
-- **No way to remove a cart line.** The API only *adds* a (possibly negative) quantity, and the schema rejects 0. The cart's "-" stops at 1.
-- **Payment is simulated.** "Finalize Manifestation" calls `POST /orders/confirm-payment`, which any signed-in user can call for their own order. Put a real payment provider (and a webhook) in front of that before selling anything.
-- **Newsletter form stores nothing** - there is no endpoint for it yet.
-- **Info pages** (`/returns`, `/support`, `/privacy`) contain placeholder copy.
+- **Payment is simulated.** "Finalize Manifestation" calls `POST /orders/confirm-payment`, which now only lets the order's owner confirm it, but still needs no real payment. Put a payment provider (and a webhook that confirms the order) in front of that before selling anything.
+- **Newsletter has no unsubscribe link.** Addresses are stored (`/admin/newsletter` lists them and can remove one), but there is no public unsubscribe flow or mailer.
+- **Info pages** (`/returns`, `/support`, `/privacy`) still need your real policies. Set `supportEmail` in `src/config/site.ts` for the support page.
 - Guests can't check out (the backend requires a signed-in user for orders).

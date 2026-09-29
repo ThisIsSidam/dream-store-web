@@ -20,5 +20,11 @@ export function useCart() {
     await mutate();
   }
 
-  return { cart: data, itemCount, error, isLoading, changeQuantity, refresh: mutate };
+  /** Drops the whole line, whatever its quantity. */
+  async function removeLine(variantId: string) {
+    await api(`cart/items/${variantId}`, { method: "DELETE" });
+    await mutate();
+  }
+
+  return { cart: data, itemCount, error, isLoading, changeQuantity, removeLine, refresh: mutate };
 }

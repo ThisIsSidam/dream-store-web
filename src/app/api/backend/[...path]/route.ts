@@ -18,6 +18,7 @@ import {
 const ALLOWED = [
   /^cart$/,
   /^cart\/add$/,
+  /^cart\/items\/[0-9a-f]{24}$/i,
   /^orders$/,
   /^orders\/(buy-now|confirm-payment|payment-failed)$/,
   /^orders\/[0-9a-f]{24}$/i,
@@ -88,4 +89,4 @@ async function handler(request: NextRequest, ctx: RouteContext<"/api/backend/[..
   return response;
 }
 
-export { handler as GET, handler as POST };
+export { handler as GET, handler as POST, handler as DELETE };

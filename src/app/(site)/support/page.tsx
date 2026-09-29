@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { InfoPage } from "@/components/site/info-page";
+import { LinkButton } from "@/components/ui/button";
+import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = { title: "Existential support" };
 
@@ -17,11 +19,23 @@ export default function SupportPage() {
           heading: "Talk to a human (probably)",
           body: "Support hours are whenever the penguin is awake. Leave your question with your order number and we will find you - in this dimension or another.",
         },
-        {
-          heading: "Placeholder",
-          body: "This page is a stand-in. Add your real support contact details before launch.",
-        },
+        ...(siteConfig.supportEmail
+          ? []
+          : [
+              {
+                heading: "Placeholder",
+                body: "This page is a stand-in. Set supportEmail in src/config/site.ts to show real contact details.",
+              },
+            ]),
       ]}
-    />
+    >
+      {siteConfig.supportEmail && (
+        <div>
+          <LinkButton href={`mailto:${siteConfig.supportEmail}`} size="xl">
+            Email {siteConfig.supportEmail}
+          </LinkButton>
+        </div>
+      )}
+    </InfoPage>
   );
 }

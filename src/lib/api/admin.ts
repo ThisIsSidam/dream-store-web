@@ -10,6 +10,7 @@ import type {
   Product,
   ProductDetail,
   Section,
+  Subscriber,
   UserRecord,
 } from "./types";
 
@@ -29,6 +30,10 @@ function list<K extends string, T>(base: string, args: ListArgs) {
 export const listProducts = (args: ListArgs) => list<"products", Product>("/products", args);
 export const listUsers = (args: ListArgs) => list<"users", UserRecord>("/users", args);
 export const listOrders = (args: ListArgs) => list<"orders", Order>("/orders", args);
+export const listSubscribers = ({ page = 1, query, limit = 20 }: ListArgs) =>
+  backend<Paginated<"subscribers", Subscriber>>("/newsletter", {
+    query: { page, limit, query: query?.trim() },
+  });
 export const listCarts = (args: ListArgs) => list<"carts", CartRecord>("/cart", args);
 
 export async function getProductDetail(id: string) {
@@ -47,14 +52,15 @@ export async function getUserRecord(id: string) {
   }
 }
 
-/**
- * GET /orders/:id is owner-only, even for admins, so single orders are found
- * through the admin search endpoint (which matches on `_id`).
- */
 export async function getOrderRecord(id: string) {
   if (!/^[0-9a-f]{24}$/i.test(id)) return null;
-  const { orders } = await listOrders({ query: id, limit: 5 });
-  return orders.find((order) => order._id === id) ?? null;
+  try {
+    const data = await backend<{ order: Order | null }>(`/orders/${id}`);
+    return data.order ?? null;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
 }
 
 export async function listOrdersOfUser(userId: string, page = 1, limit = ADMIN_PAGE_SIZE) {

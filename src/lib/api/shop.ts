@@ -24,8 +24,8 @@ export async function getMyOrder(id: string): Promise<Order | null> {
     const data = await backend<{ order: Order | null }>(`/orders/${id}`);
     return data.order ?? null;
   } catch (error) {
-    // The backend answers 401 for someone else's order and 500 for an unknown one.
-    if (error instanceof ApiError && (error.status === 401 || error.status === 500)) {
+    // 401 is someone else's order, 404 an unknown (or malformed) one.
+    if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
       return null;
     }
     throw error;

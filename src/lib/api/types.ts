@@ -118,6 +118,8 @@ export type User = {
 };
 
 /** Users listed by the admin endpoints come straight from mongoose (`_id`). */
+export type Subscriber = { _id: string; email: string; createdAt: string };
+
 export type UserRecord = Omit<User, "id"> & { _id: string };
 
 export type Banner = {

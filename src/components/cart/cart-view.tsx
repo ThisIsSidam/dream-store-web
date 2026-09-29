@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingCart, Sparkles } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { DispatchProtocols } from "@/components/orders/dispatch-protocols";
 import { RealityReceipt } from "@/components/orders/receipt";
@@ -17,19 +17,22 @@ import { useCart } from "@/lib/client/use-cart";
 import { blobFor, formatMoney } from "@/lib/utils";
 
 function CartLineCard({ line }: { line: CartLine }) {
-  const { changeQuantity } = useCart();
+  const { changeQuantity, removeLine } = useCart();
   const [pending, setPending] = useState(false);
 
-  async function change(delta: number) {
+  async function run(action: () => Promise<void>) {
     setPending(true);
     try {
-      await changeQuantity(line.variantId, line.name, delta);
+      await action();
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Could not update your cart.");
     } finally {
       setPending(false);
     }
   }
+
+  const change = (delta: number) => run(() => changeQuantity(line.variantId, line.name, delta));
+  const remove = () => run(() => removeLine(line.variantId));
 
   const stepper = "grid size-11 place-items-center rounded-full transition-[filter] hover:brightness-95 disabled:opacity-40";
 
@@ -75,6 +78,15 @@ function CartLineCard({ line }: { line: CartLine }) {
           </button>
         </div>
         <p className="t-label text-on-surface-variant">{formatMoney(line.price * line.quantity)}</p>
+        <button
+          type="button"
+          aria-label={`Remove ${line.name} from cart`}
+          disabled={pending}
+          onClick={remove}
+          className="t-caption inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-on-surface-variant transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-40"
+        >
+          <Trash2 className="size-4" aria-hidden /> Remove
+        </button>
       </div>
     </li>
   );

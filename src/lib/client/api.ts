@@ -1,7 +1,7 @@
 import { ApiError, extractErrorMessage } from "@/lib/api/errors";
 
 type Init = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "DELETE";
   body?: unknown;
 };
 

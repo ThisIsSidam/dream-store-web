@@ -243,3 +243,14 @@ export async function saveSectionItems(sectionId: string, title: string, order: 
   }
   return result;
 }
+
+// ---------------------------------------------------------------------------
+// Newsletter
+// ---------------------------------------------------------------------------
+
+/** Form action: `<form action={removeSubscriber.bind(null, id)}>`. */
+export async function removeSubscriber(id: string) {
+  const result = await run(() => backend(`/newsletter/${id}`, { method: "DELETE" }));
+  if (!result.ok) throw new Error(result.error);
+  revalidatePath("/admin/newsletter");
+}

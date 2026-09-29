@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Box, Home, LogOut, ShoppingBag, ShoppingCart, Sparkles, Users, LayoutDashboard, ExternalLink } from "lucide-react";
+import { Box, Home, LogOut, ShoppingBag, ShoppingCart, Sparkles, Users, LayoutDashboard, ExternalLink, Mail } from "lucide-react";
 import { signOut } from "@/app/actions/auth";
 import { siteConfig } from "@/config/site";
 import type { User } from "@/lib/api/types";
@@ -15,6 +15,7 @@ const nav = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, title: "Order Management" },
   { href: "/admin/carts", label: "Carts", icon: ShoppingCart, title: "Active Carts" },
   { href: "/admin/home", label: "Home page", icon: Home, title: "Home Management" },
+  { href: "/admin/newsletter", label: "Newsletter", icon: Mail, title: "Newsletter Subscribers" },
 ] as const;
 
 function isActive(pathname: string, item: (typeof nav)[number]) {
