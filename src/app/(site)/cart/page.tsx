@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Your cart" };
 
 export default function CartPage() {
   return (
-    <PageShell title="Manifesting Soon" width="max-w-[1280px]">
+    <PageShell>
       <CartView />
     </PageShell>
   );

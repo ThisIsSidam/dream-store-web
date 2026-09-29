@@ -1,38 +1,31 @@
-import Link from "next/link";
-import { siteConfig } from "@/config/site";
 import { SiteFooter } from "./footer";
+import { SiteHeader } from "./header";
+import { MobileNav } from "./mobile-nav";
 
-/** Two-column frame for /signin and /signup: hero on the left, form card on the right. */
-export function AuthShell({ hero, form }: { hero: React.ReactNode; form: React.ReactNode }) {
+/** Card with a red intro panel (md and up) and the form beside it, under the normal header. */
+export function AuthShell({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
   return (
     <>
-      <div className="mx-auto w-full max-w-[1280px] px-6 pt-6">
-        <Link href="/" className="t-headline-md !text-2xl font-extrabold text-primary">
-          {siteConfig.companyName}
-        </Link>
-      </div>
-      <main className="mx-auto mt-6 grid w-full max-w-[1280px] flex-1 items-center gap-10 px-6 pb-20 lg:grid-cols-[52fr_48fr]">
-        {hero}
-        {form}
+      <SiteHeader />
+      <main className="flex-1 sm:px-4 sm:py-8">
+        <div className="mx-auto grid max-w-[820px] bg-white shadow-float md:grid-cols-[2fr_3fr]">
+          <aside className="hidden flex-col bg-primary p-10 text-white md:flex">
+            <p className="font-display text-3xl font-bold">{title}</p>
+            <p className="mt-4 text-lg text-white/80">{subtitle}</p>
+          </aside>
+          <div className="p-6 pb-24 sm:p-10">{children}</div>
+        </div>
       </main>
       <SiteFooter />
+      <MobileNav />
     </>
-  );
-}
-
-export function AuthCard({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-[34px] border border-surface-container-highest/55 bg-surface/90 p-6 shadow-[0_22px_44px_color-mix(in_srgb,var(--color-primary)_12%,transparent)] sm:p-8">
-      {children}
-    </div>
-  );
-}
-
-export function FormError({ message }: { message?: string }) {
-  if (!message) return null;
-  return (
-    <p role="alert" className="t-body-md mb-4 rounded-[20px] border border-error/25 bg-error/8 p-3.5 text-sm text-error">
-      {message}
-    </p>
   );
 }

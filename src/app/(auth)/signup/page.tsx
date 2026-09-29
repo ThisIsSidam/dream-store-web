@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/site/auth-shell";
 import { SignUpForm } from "@/components/site/auth-forms";
-import { SignUpHero } from "@/components/site/auth-heroes";
 import { getSession } from "@/lib/auth/session";
 import { safeNext } from "@/lib/utils";
 
@@ -14,5 +13,9 @@ export default async function SignUpPage({ searchParams }: PageProps<"/signup">)
 
   if (await getSession()) redirect(next || "/account");
 
-  return <AuthShell hero={<SignUpHero />} form={<SignUpForm next={next || undefined} />} />;
+  return (
+    <AuthShell title="Looks like you're new here!" subtitle="Sign up with your email to get started.">
+      <SignUpForm next={next || undefined} />
+    </AuthShell>
+  );
 }

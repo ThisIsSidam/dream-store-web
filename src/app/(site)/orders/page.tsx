@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Receipt } from "lucide-react";
+import { Package } from "lucide-react";
 import { OrdersFilters } from "@/components/orders/orders-filters";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { PageShell } from "@/components/site/page-shell";
@@ -24,26 +24,28 @@ function OrderCard({ order }: { order: Order }) {
   return (
     <Link
       href={`/orders/${order._id}`}
-      className="flex items-center gap-4 rounded-[30px] border border-outline-variant/30 bg-surface/90 p-4 shadow-[0_14px_24px_color-mix(in_srgb,var(--color-primary)_6%,transparent)] transition-transform hover:-translate-y-0.5 sm:gap-6 sm:p-5"
+      className="flex items-center gap-4 bg-white p-4 shadow-soft transition-shadow hover:shadow-float sm:gap-6 sm:p-5"
     >
       <RemoteImage
         src={first?.productImage}
         alt=""
         width={300}
-        sizes="120px"
-        className="size-20 shrink-0 rounded-3xl bg-surface-container-highest/45 sm:size-[120px]"
+        sizes="80px"
+        className="size-16 shrink-0 bg-white sm:size-20"
+        imgClassName="object-contain"
       />
       <div className="min-w-0 flex-1">
-        <p className="t-caption tracking-[1.2px] text-on-surface-variant">ORDER #{shortId(order._id)}</p>
-        <p className="t-headline mt-2 truncate !text-xl font-extrabold sm:!text-2xl">
-          {first?.name ?? "Empty order"}
+        <p className="truncate font-medium">{first?.name ?? "Empty order"}</p>
+        <p className="mt-1 text-sm text-on-surface-variant">
+          Order #{shortId(order._id)}
+          {more > 0 && ` · +${more} more`}
         </p>
-        {more > 0 && <p className="t-caption mt-1 text-on-surface-variant">+ {more} more</p>}
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-2 text-right">
-        <p className="t-body-md font-extrabold text-primary">{formatMoney(order.priceBreakup.total)}</p>
+      <p className="hidden font-semibold sm:block">{formatMoney(order.priceBreakup.total)}</p>
+      <div className="flex shrink-0 flex-col items-end gap-1.5 text-right sm:w-36">
         <StatusBadge status={order.status} />
-        <p className="text-[13px] text-on-surface-variant">{formatDate(order.createdAt, "short")}</p>
+        <p className="text-xs text-on-surface-variant">{formatDate(order.createdAt, "short")}</p>
+        <p className="text-sm font-semibold sm:hidden">{formatMoney(order.priceBreakup.total)}</p>
       </div>
     </Link>
   );
@@ -70,33 +72,38 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
 
   if (orders.length === 0 && !hasFilters) {
     return (
-      <PageShell title="Orders">
-        <EmptyState
-          icon={Receipt}
-          title="No orders yet"
-          message="Your future receipts will appear here."
-          action={<LinkButton href="/categories">Start shopping</LinkButton>}
-        />
+      <PageShell>
+        <div className="bg-white shadow-soft">
+          <EmptyState
+            icon={Package}
+            title="You have no orders yet"
+            message="When you place an order it will show up here."
+            action={<LinkButton href="/products">Start shopping</LinkButton>}
+          />
+        </div>
       </PageShell>
     );
   }
 
   return (
-    <PageShell title="Orders">
-      <div className="grid items-start gap-8 lg:grid-cols-[280px_1fr]">
+    <PageShell>
+      <div className="grid items-start gap-3 lg:grid-cols-[260px_1fr]">
         <OrdersFilters />
         <div>
+          <h1 className="mb-3 font-display text-lg font-bold">My orders</h1>
           {orders.length === 0 ? (
-            <EmptyState
-              icon={Receipt}
-              title="Sorry, no orders found"
-              message="Try loosening the filters."
-              action={
-                <LinkButton href="/orders" variant="soft">
-                  Show all orders
-                </LinkButton>
-              }
-            />
+            <div className="bg-white shadow-soft">
+              <EmptyState
+                icon={Package}
+                title="No orders match your filters"
+                message="Try loosening the filters."
+                action={
+                  <LinkButton href="/orders" variant="outline">
+                    Show all orders
+                  </LinkButton>
+                }
+              />
+            </div>
           ) : (
             <ul className="flex flex-col gap-3">
               {orders.map((order) => (
@@ -110,7 +117,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
             page={pagination.page}
             totalPages={pagination.totalPages}
             hrefFor={hrefFor}
-            className="mt-10"
+            className="mt-8"
           />
         </div>
       </div>

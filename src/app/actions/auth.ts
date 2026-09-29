@@ -30,7 +30,7 @@ const signInSchema = z.object({
 
 const signUpSchema = signInSchema.extend({
   name: z.string().trim().min(2, "Enter your name"),
-  terms: z.literal("on", "You need to agree before we can manifest you"),
+  terms: z.literal("on", "Please accept the privacy policy to continue"),
 });
 
 function echo(formData: FormData) {

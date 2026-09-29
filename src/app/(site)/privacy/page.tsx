@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { InfoPage } from "@/components/site/info-page";
 
-export const metadata: Metadata = { title: "Privacy void" };
+export const metadata: Metadata = { title: "Privacy policy" };
 
 export default function PrivacyPage() {
   return (
     <InfoPage
-      title="Privacy Void"
-      intro="What happens in the void stays in the void. Mostly."
+      title="Privacy policy"
+      intro="What we collect and why."
       sections={[
         {
           heading: "What we keep",
-          body: "Your name, email address and order history, so that you can sign in and see your receipts. Passwords are stored hashed, never in plain text.",
+          body: "Your name, email address and order history, so that you can sign in and see your orders. Passwords are stored hashed, never in plain text.",
         },
         {
           heading: "Your cart",

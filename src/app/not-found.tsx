@@ -7,9 +7,9 @@ export default function NotFound() {
     <div className="grid min-h-dvh place-items-center bg-surface">
       <EmptyState
         icon={SearchX}
-        title="This reality doesn't exist"
-        message="The page you're looking for was never manifested - or it was, and got returned."
-        action={<LinkButton href="/">Back to the shop</LinkButton>}
+        title="Page not found"
+        message="The page you're looking for doesn't exist or has moved."
+        action={<LinkButton href="/">Go to homepage</LinkButton>}
       />
     </div>
   );

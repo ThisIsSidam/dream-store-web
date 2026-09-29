@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/site/auth-shell";
 import { SignInForm } from "@/components/site/auth-forms";
-import { SignInHero } from "@/components/site/auth-heroes";
 import { getSession } from "@/lib/auth/session";
 import { safeNext } from "@/lib/utils";
 
@@ -15,5 +14,9 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   // Already signed in? Skip the form.
   if (await getSession()) redirect(next || "/account");
 
-  return <AuthShell hero={<SignInHero />} form={<SignInForm next={next || undefined} />} />;
+  return (
+    <AuthShell title="Login" subtitle="Get access to your orders and cart.">
+      <SignInForm next={next || undefined} />
+    </AuthShell>
+  );
 }

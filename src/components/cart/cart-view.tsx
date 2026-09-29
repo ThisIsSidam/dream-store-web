@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingCart, Sparkles, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Minus, Plus, ShoppingBag, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
-import { DispatchProtocols } from "@/components/orders/dispatch-protocols";
-import { RealityReceipt } from "@/components/orders/receipt";
+import { PriceDetails } from "@/components/orders/price-details";
 import { Skeleton } from "@/components/site/loading";
 import { Button, LinkButton } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
@@ -14,7 +14,7 @@ import { ApiError } from "@/lib/api/errors";
 import type { CartLine, Order } from "@/lib/api/types";
 import { api } from "@/lib/client/api";
 import { useCart } from "@/lib/client/use-cart";
-import { blobFor, formatMoney } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils";
 
 function CartLineCard({ line }: { line: CartLine }) {
   const { changeQuantity, removeLine } = useCart();
@@ -34,37 +34,34 @@ function CartLineCard({ line }: { line: CartLine }) {
   const change = (delta: number) => run(() => changeQuantity(line.variantId, line.name, delta));
   const remove = () => run(() => removeLine(line.variantId));
 
-  const stepper = "grid size-11 place-items-center rounded-full transition-[filter] hover:brightness-95 disabled:opacity-40";
+  const stepper =
+    "grid size-8 place-items-center rounded-full border border-outline-variant bg-white hover:bg-surface-container-low disabled:opacity-40";
 
   return (
-    <li className="flex flex-col items-center gap-5 rounded-[32px] bg-surface-container-low p-5 shadow-[0_8px_18px_rgb(0_0_0/0.03)] sm:flex-row sm:gap-8 sm:p-8">
-      <RemoteImage
-        src={line.productImage}
-        alt=""
-        width={300}
-        sizes="128px"
-        className={`size-28 shrink-0 bg-secondary-container/45 sm:size-32 ${blobFor(line.variantId)}`}
-        fallback={<Sparkles className="size-9 text-secondary" aria-hidden />}
-      />
-      <div className="min-w-0 flex-1 text-center sm:text-left">
-        <p className="t-body-lg break-words font-bold">{line.name}</p>
-        <p className="t-body-md mt-1 text-on-surface-variant">Unexpired, 100% resolution rate.</p>
-        <span className="t-caption mt-3 inline-block rounded-full bg-[#ffdf9b] px-3 py-1.5 text-[10px] uppercase tracking-wider text-on-tertiary-container">
-          Actually Impossible
-        </span>
-      </div>
-      <div className="flex flex-col items-center gap-3">
-        <div className="flex items-center rounded-full bg-surface p-2 shadow-[0_2px_8px_rgb(0_0_0/0.06)]">
+    <li className="flex gap-4 border-b border-outline-variant/40 p-4 sm:gap-6 sm:p-6">
+      <div className="flex shrink-0 flex-col items-center gap-4">
+        <Link href={`/product/${line.productId}`}>
+          <RemoteImage
+            src={line.productImage}
+            alt=""
+            width={300}
+            sizes="112px"
+            className="size-24 bg-white sm:size-28"
+            imgClassName="object-contain"
+            fallback={<ShoppingBag className="size-9 text-outline" aria-hidden />}
+          />
+        </Link>
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             aria-label={`Decrease quantity of ${line.name}`}
             disabled={pending || line.quantity <= 1}
             onClick={() => change(-1)}
-            className={`${stepper} bg-secondary-container text-secondary`}
+            className={stepper}
           >
-            <Minus className="size-5" />
+            <Minus className="size-4" />
           </button>
-          <output aria-live="polite" className="t-headline w-11 text-center !text-lg text-primary">
+          <output aria-live="polite" className="grid h-8 w-11 place-items-center border border-outline-variant text-sm font-semibold">
             {line.quantity}
           </output>
           <button
@@ -72,20 +69,30 @@ function CartLineCard({ line }: { line: CartLine }) {
             aria-label={`Increase quantity of ${line.name}`}
             disabled={pending}
             onClick={() => change(1)}
-            className={`${stepper} bg-primary-container text-on-primary-container`}
+            className={stepper}
           >
-            <Plus className="size-5" />
+            <Plus className="size-4" />
           </button>
         </div>
-        <p className="t-label text-on-surface-variant">{formatMoney(line.price * line.quantity)}</p>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Link href={`/product/${line.productId}`} className="line-clamp-2 font-medium hover:text-primary">
+          {line.name}
+        </Link>
+        <p className="mt-2 text-lg font-semibold">{formatMoney(line.subtotal)}</p>
+        {line.quantity > 1 && (
+          <p className="text-sm text-on-surface-variant">
+            {line.quantity} × {formatMoney(line.price)}
+          </p>
+        )}
         <button
           type="button"
           aria-label={`Remove ${line.name} from cart`}
           disabled={pending}
           onClick={remove}
-          className="t-caption inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-on-surface-variant transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-40"
+          className="mt-auto self-start pt-3 text-sm font-bold uppercase tracking-wide hover:text-primary disabled:opacity-40"
         >
-          <Trash2 className="size-4" aria-hidden /> Remove
+          Remove
         </button>
       </div>
     </li>
@@ -117,12 +124,9 @@ export function CartView() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-12 lg:grid-cols-3" aria-busy>
-        <div className="flex flex-col gap-6 lg:col-span-2">
-          <Skeleton className="h-48 rounded-[32px]" />
-          <Skeleton className="h-48 rounded-[32px]" />
-        </div>
-        <Skeleton className="h-[520px] rounded-[48px]" />
+      <div className="grid gap-3 lg:grid-cols-[1fr_380px]" aria-busy>
+        <Skeleton className="h-72" />
+        <Skeleton className="h-64" />
       </div>
     );
   }
@@ -138,36 +142,38 @@ export function CartView() {
 
   if (!cart || cart.items.length === 0) {
     return (
-      <EmptyState
-        icon={ShoppingCart}
-        title="Your cart is empty"
-        message="Nothing here yet - the void is waiting to be filled."
-        action={<LinkButton href="/categories">Start browsing</LinkButton>}
-      />
+      <div className="bg-white shadow-soft">
+        <EmptyState
+          icon={ShoppingCart}
+          title="Your cart is empty!"
+          message="Add items to it now."
+          action={<LinkButton href="/products">Shop now</LinkButton>}
+        />
+      </div>
     );
   }
 
+  const itemCount = cart.items.reduce((sum, line) => sum + line.quantity, 0);
+
   return (
-    <div className="grid items-start gap-12 lg:grid-cols-3">
-      <div className="lg:col-span-2">
-        <ul className="flex flex-col gap-6">
+    <div className="grid items-start gap-3 lg:grid-cols-[1fr_380px]">
+      <section className="bg-white shadow-soft">
+        <h1 className="border-b border-outline-variant/40 px-4 py-4 font-display text-lg font-bold sm:px-6">
+          My cart ({cart.items.length})
+        </h1>
+        <ul>
           {cart.items.map((line) => (
             <CartLineCard key={line.variantId} line={line} />
           ))}
         </ul>
-        <DispatchProtocols />
-      </div>
-      <RealityReceipt priceBreakup={cart.priceBreakup}>
-        <Button
-          variant="accent"
-          size="xl"
-          className="mt-11 w-full"
-          loading={checkingOut}
-          onClick={checkout}
-        >
-          Finalize Manifestation <Sparkles className="size-5" aria-hidden />
-        </Button>
-      </RealityReceipt>
+        <div className="sticky bottom-0 flex items-center justify-between gap-4 bg-white p-4 shadow-[0_-2px_10px_rgb(0_0_0/0.1)] max-xs:bottom-14 sm:px-6">
+          <p className="text-lg font-semibold lg:hidden">{formatMoney(cart.priceBreakup.total)}</p>
+          <Button variant="buy" size="xl" className="ml-auto max-lg:flex-1 lg:min-w-64" loading={checkingOut} onClick={checkout}>
+            Place order
+          </Button>
+        </div>
+      </section>
+      <PriceDetails priceBreakup={cart.priceBreakup} itemCount={itemCount} className="lg:sticky lg:top-16" />
     </div>
   );
 }

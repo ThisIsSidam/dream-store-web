@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { CheckoutPanel } from "@/components/orders/checkout-panel";
-import { DispatchProtocols } from "@/components/orders/dispatch-protocols";
 import { OrderItemCard } from "@/components/orders/order-item-card";
 import { PageShell } from "@/components/site/page-shell";
 import { getMyOrder } from "@/lib/api/shop";
@@ -18,16 +17,18 @@ export default async function CheckoutPage({ params }: PageProps<"/checkout/[id]
   if (order.status !== "pending") redirect(`/orders/${order._id}`);
 
   return (
-    <PageShell title="Manifesting Soon" width="max-w-[1280px]">
-      <div className="grid items-start gap-12 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <ul className="flex flex-col gap-4">
+    <PageShell>
+      <div className="grid items-start gap-3 lg:grid-cols-[1fr_380px]">
+        <section className="bg-white shadow-soft">
+          <h1 className="border-b border-outline-variant/40 px-4 py-4 font-display text-lg font-bold sm:px-6">
+            Order summary
+          </h1>
+          <ul>
             {order.items.map((item) => (
               <OrderItemCard key={item.variantId} item={item} />
             ))}
           </ul>
-          <DispatchProtocols />
-        </div>
+        </section>
         <CheckoutPanel order={order} />
       </div>
     </PageShell>

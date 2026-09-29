@@ -21,12 +21,12 @@ function Group({
 }) {
   return (
     <fieldset>
-      <legend className="t-label mb-3 uppercase tracking-wide">{legend}</legend>
+      <legend className="mb-2 text-xs font-bold uppercase tracking-wide text-on-surface-variant">{legend}</legend>
       <div className="flex flex-col gap-1">
         {options.map((option) => (
           <label
             key={option.value}
-            className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5 text-sm hover:bg-surface-container-high"
+            className="flex cursor-pointer items-center gap-3 py-1.5 text-sm"
           >
             <input
               type="checkbox"
@@ -72,11 +72,11 @@ export function OrdersFilters() {
     <aside
       aria-label="Filter orders"
       className={cn(
-        "flex flex-col gap-6 rounded-3xl bg-surface-container-lowest p-6 shadow-card transition-opacity",
+        "flex flex-col gap-5 bg-white p-5 shadow-soft transition-opacity",
         pending && "opacity-60",
       )}
     >
-      <h2 className="t-headline">Filters</h2>
+      <h2 className="font-display text-lg font-bold">Filters</h2>
       <Group
         legend="Order status"
         name="status"
@@ -101,7 +101,7 @@ export function OrdersFilters() {
               router.replace(pathname);
             })
           }
-          className="t-label self-start text-primary hover:underline"
+          className="self-start text-sm font-semibold text-primary hover:underline"
         >
           Clear filters
         </button>

@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Clock, Sparkles } from "lucide-react";
+import { Clock } from "lucide-react";
 import { toast } from "sonner";
-import { RealityReceipt } from "@/components/orders/receipt";
+import { PriceDetails } from "@/components/orders/price-details";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { ApiError } from "@/lib/api/errors";
 import type { Order } from "@/lib/api/types";
 import { api } from "@/lib/client/api";
+import { formatMoney } from "@/lib/utils";
 
 function useCountdown(expiresAt: string) {
   const [remaining, setRemaining] = useState(() => new Date(expiresAt).getTime() - Date.now());
@@ -41,6 +42,7 @@ export function CheckoutPanel({ order }: { order: Order }) {
 
   const minutes = Math.floor(remaining / 60000);
   const seconds = Math.floor((remaining % 60000) / 1000);
+  const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
 
   async function pay() {
     setBusy("pay");
@@ -68,29 +70,31 @@ export function CheckoutPanel({ order }: { order: Order }) {
   }
 
   return (
-    <RealityReceipt priceBreakup={order.priceBreakup}>
-      <p className="mt-6 flex items-center justify-center gap-2 text-sm font-semibold text-on-secondary-container/80" role="timer">
-        <Clock className="size-4" aria-hidden />
-        {expired ? "Reservation expired" : `Items reserved for ${minutes}:${String(seconds).padStart(2, "0")}`}
-      </p>
-      <Button
-        variant="accent"
-        size="xl"
-        className="mt-6 w-full"
-        loading={busy === "pay"}
-        disabled={expired || busy === "cancel"}
-        onClick={pay}
-      >
-        Finalize Manifestation <Sparkles className="size-5" aria-hidden />
-      </Button>
-      <button
-        type="button"
-        onClick={() => setConfirmingCancel(true)}
-        disabled={busy !== null}
-        className="t-label mt-4 w-full rounded-full py-2 text-on-secondary-container/80 underline-offset-4 hover:underline disabled:opacity-50"
-      >
-        Cancel this order
-      </button>
+    <PriceDetails priceBreakup={order.priceBreakup} itemCount={itemCount} className="lg:sticky lg:top-16">
+      <div className="border-t border-outline-variant/40 p-5">
+        <p className="flex items-center gap-2 text-sm font-semibold text-buy" role="timer">
+          <Clock className="size-4" aria-hidden />
+          {expired ? "Reservation expired" : `Items reserved for ${minutes}:${String(seconds).padStart(2, "0")}`}
+        </p>
+        <Button
+          variant="buy"
+          size="xl"
+          className="mt-4 w-full"
+          loading={busy === "pay"}
+          disabled={expired || busy === "cancel"}
+          onClick={pay}
+        >
+          Pay {formatMoney(order.priceBreakup.total)}
+        </Button>
+        <button
+          type="button"
+          onClick={() => setConfirmingCancel(true)}
+          disabled={busy !== null}
+          className="mt-3 w-full py-2 text-sm font-semibold text-on-surface-variant hover:text-primary disabled:opacity-50"
+        >
+          Cancel this order
+        </button>
+      </div>
       <ConfirmDialog
         open={confirmingCancel}
         onClose={() => setConfirmingCancel(false)}
@@ -102,6 +106,6 @@ export function CheckoutPanel({ order }: { order: Order }) {
         cancelLabel="Keep order"
         destructive
       />
-    </RealityReceipt>
+    </PriceDetails>
   );
 }
