@@ -1,61 +1,73 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { ProductVisual } from "@/components/ui/product-visual";
+import { searchCatalog, type CatalogProduct } from "@/lib/data/products";
+import { cn, formatPrice } from "@/lib/utils";
+import {
+  ArrowRight,
+  HelpCircle,
+  Search,
+  Sparkles,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
-import { api } from "@/lib/client/api";
-import type { Paginated, Product } from "@/lib/api/types";
-import { cn, formatPriceRange } from "@/lib/utils";
+import { useEffect, useId, useRef, useState } from "react";
 
-const MIN_CHARS = 3;
+const POPULAR_SEARCHES = [
+  "things that shouldn't exist",
+  "cheap weird stuff",
+  "black hole",
+  "something unnecessary",
+  "gift for someone impossible to shop for",
+];
 
-/**
- * Header search with live suggestions from the catalogue.
- * Enter (or picking "See all results") goes to /search?q=...
- */
-export function SearchBox({ className, autoFocus }: { className?: string; autoFocus?: boolean }) {
+const SUGGESTED_CATEGORIES = [
+  { name: "Science", query: "Science" },
+  { name: "Collectibles", query: "Collectibles" },
+  { name: "Home", query: "Home" },
+  { name: "Weird Stuff", query: "Weird Stuff" },
+];
+
+export function SearchBox({
+  className,
+  autoFocus,
+  placeholder = "Search for something questionable...",
+}: {
+  className?: string;
+  autoFocus?: boolean;
+  placeholder?: string;
+}) {
   const router = useRouter();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
-  const [results, setResults] = useState<Product[]>([]);
+  const [results, setResults] = useState<CatalogProduct[]>([]);
   const [active, setActive] = useState(-1);
+
   const query = value.trim();
-  const searchable = query.length >= MIN_CHARS;
 
   useEffect(() => {
-    if (!searchable) return;
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      try {
-        const data = await api<Paginated<"products", Product>>(
-          `products/search?query=${encodeURIComponent(query)}&limit=6`,
-        );
-        if (!controller.signal.aborted) {
-          setResults(data.products);
-          setActive(-1);
-        }
-      } catch {
-        if (!controller.signal.aborted) setResults([]);
-      }
-    }, 250);
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [query, searchable]);
+    if (!query) {
+      setResults([]);
+      return;
+    }
+    const matches = searchCatalog(query).slice(0, 5);
+    setResults(matches);
+    setActive(-1);
+  }, [query]);
 
+  // Click outside listener
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
-
-  const showList = open && searchable;
-  const visible = searchable ? results : [];
 
   function submit(term = query) {
     if (!term) return;
@@ -69,16 +81,16 @@ export function SearchBox({ className, autoFocus }: { className?: string; autoFo
     } else if (event.key === "ArrowDown") {
       event.preventDefault();
       setOpen(true);
-      setActive((i) => Math.min(i + 1, visible.length - 1));
+      setActive((i) => Math.min(i + 1, results.length - 1));
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       setActive((i) => Math.max(i - 1, -1));
     } else if (event.key === "Enter") {
       event.preventDefault();
-      const picked = visible[active];
+      const picked = results[active];
       if (picked) {
         setOpen(false);
-        router.push(`/product/${picked._id}`);
+        router.push(`/product/${picked.id}`);
       } else {
         submit();
       }
@@ -86,16 +98,17 @@ export function SearchBox({ className, autoFocus }: { className?: string; autoFo
   }
 
   return (
-    <div ref={rootRef} className={cn("relative", className)}>
-      <div className="flex h-10 items-center rounded-sm bg-white pl-4 shadow-soft focus-within:shadow-float">
+    <div ref={rootRef} className={cn("relative w-full", className)}>
+      {/* Search Input Bar */}
+      <div className="flex h-10 w-full items-center rounded-lg border border-neutral-300/80 bg-neutral-50/70 px-3 transition-all focus-within:border-indigo-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-100 shadow-xs">
+        <Search className="size-4 shrink-0 text-neutral-400 mr-2" aria-hidden />
         <input
           type="search"
           role="combobox"
-          aria-expanded={showList}
+          aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
-          aria-label="Search products"
+          aria-label="Search questionable products"
           autoFocus={autoFocus}
           value={value}
           onChange={(e) => {
@@ -104,8 +117,8 @@ export function SearchBox({ className, autoFocus }: { className?: string; autoFo
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Search for products"
-          className="min-w-0 flex-1 bg-transparent text-sm text-on-surface outline-none placeholder:text-on-surface-variant [&::-webkit-search-cancel-button]:hidden"
+          placeholder={placeholder}
+          className="min-w-0 flex-1 bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400 [&::-webkit-search-cancel-button]:hidden"
         />
         {value && (
           <button
@@ -113,69 +126,169 @@ export function SearchBox({ className, autoFocus }: { className?: string; autoFo
             aria-label="Clear search"
             onClick={() => {
               setValue("");
-              setOpen(false);
+              setResults([]);
             }}
-            className="grid size-8 place-items-center rounded-full text-on-surface-variant hover:bg-surface-container-high"
+            className="grid size-6 place-items-center rounded-full text-neutral-400 hover:bg-neutral-200/60 hover:text-neutral-700 mr-1"
           >
-            <X className="size-4" />
+            <X className="size-3.5" />
           </button>
         )}
         <button
           type="button"
-          aria-label="Search"
           onClick={() => submit()}
-          className="grid h-full w-11 shrink-0 place-items-center text-primary"
+          className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
         >
-          <Search className="size-5" aria-hidden />
+          Search
         </button>
       </div>
 
-      {showList && (
-        <div className="absolute inset-x-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-sm bg-white py-1 shadow-float">
-          <ul id={listId} role="listbox" className="max-h-80 overflow-y-auto">
-            {visible.map((product, i) => (
-              <li
-                key={product._id}
-                id={`${listId}-${i}`}
-                role="option"
-                aria-selected={i === active}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpen(false);
-                    router.push(`/product/${product._id}`);
-                  }}
-                  onMouseEnter={() => setActive(i)}
-                  className={cn(
-                    "flex w-full items-center gap-3 px-4 py-2.5 text-left",
-                    i === active && "bg-surface-container-high",
-                  )}
+      {/* Autocomplete / Suggested Dropdown */}
+      {open && (
+        <div className="absolute inset-x-0 top-[calc(100%+6px)] z-50 overflow-hidden rounded-xl border border-neutral-200 bg-white p-3 shadow-xl">
+          {/* If user is typing query, show instant product results */}
+          {query ? (
+            <div>
+              <div className="mb-2 flex items-center justify-between px-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                <span>Matching Products</span>
+                <span className="font-normal lowercase text-neutral-400">
+                  press enter to see all
+                </span>
+              </div>
+
+              {results.length > 0 ? (
+                <ul
+                  id={listId}
+                  role="listbox"
+                  className="divide-y divide-neutral-100"
                 >
-                  <Search className="size-4 shrink-0 text-on-surface-variant" aria-hidden />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-on-surface">{product.name}</span>
-                    <span className="block truncate text-xs capitalize text-on-surface-variant">
-                      {product.category}
-                    </span>
-                  </span>
-                  <span className="t-label shrink-0 text-primary">
-                    {formatPriceRange(product.minPrice, product.maxPrice)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          {visible.length === 0 && (
-            <p className="t-body-md px-4 py-3 text-on-surface-variant">No matches yet.</p>
+                  {results.map((product, i) => (
+                    <li
+                      key={product.id}
+                      role="option"
+                      aria-selected={i === active}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpen(false);
+                          router.push(`/product/${product.id}`);
+                        }}
+                        onMouseEnter={() => setActive(i)}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors",
+                          i === active
+                            ? "bg-neutral-100"
+                            : "hover:bg-neutral-50",
+                        )}
+                      >
+                        <div className="size-10 shrink-0 overflow-hidden rounded-md border border-neutral-200">
+                          <ProductVisual
+                            visualId={product.visualId}
+                            name={product.name}
+                            showStudioLighting={false}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-neutral-900">
+                            {product.name}
+                          </p>
+                          <p className="truncate text-xs text-neutral-500">
+                            {product.category} • {product.shortDescription}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <span className="text-sm font-bold text-neutral-900">
+                            {formatPrice(product.price)}
+                          </span>
+                          <span className="block text-[10px] text-emerald-600 font-medium">
+                            In Stock
+                          </span>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="py-6 text-center text-neutral-500">
+                  <p className="text-sm font-medium">
+                    No questionable matches for &ldquo;{query}&rdquo;.
+                  </p>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Whatever you are looking for might be too normal for our
+                    catalog.
+                  </p>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => submit()}
+                className="mt-3 flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-semibold text-neutral-800 transition-colors hover:bg-neutral-100"
+              >
+                <span>View all search results for &ldquo;{query}&rdquo;</span>
+                <ArrowRight className="size-3.5 text-neutral-500" />
+              </button>
+            </div>
+          ) : (
+            /* If search bar is empty, show Popular Searches, Suggested Categories, and Easter Egg */
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+                  <TrendingUp className="size-3.5 text-indigo-500" />
+                  <span>Popular Searches</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {POPULAR_SEARCHES.map((term) => (
+                    <button
+                      key={term}
+                      type="button"
+                      onClick={() => {
+                        setValue(term);
+                        submit(term);
+                      }}
+                      className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs text-neutral-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+                  <Sparkles className="size-3.5 text-indigo-500" />
+                  <span>Suggested Categories</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {SUGGESTED_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.name}
+                      type="button"
+                      onClick={() => {
+                        setOpen(false);
+                        router.push(
+                          `/products?category=${encodeURIComponent(cat.query)}`,
+                        );
+                      }}
+                      className="flex items-center justify-between rounded-lg border border-neutral-100 bg-neutral-50/70 p-2 text-left text-xs text-neutral-800 transition-colors hover:bg-neutral-100"
+                    >
+                      <span className="font-medium">{cat.name}</span>
+                      <ArrowRight className="size-3 text-neutral-400" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Deadpan Easter Egg Note */}
+              <div className="flex items-center gap-2 rounded-lg bg-indigo-50/60 p-2.5 text-xs text-indigo-900">
+                <HelpCircle className="size-4 shrink-0 text-indigo-500" />
+                <p>
+                  <span className="font-semibold">Live metric:</span> People are
+                  currently searching for &ldquo;why&rdquo;.
+                </p>
+              </div>
+            </div>
           )}
-          <button
-            type="button"
-            onClick={() => submit()}
-            className="t-label mt-1 block w-full border-t border-outline-variant/40 px-4 py-3 text-left text-primary hover:bg-surface-container-high"
-          >
-            See all results for “{query}”
-          </button>
         </div>
       )}
     </div>

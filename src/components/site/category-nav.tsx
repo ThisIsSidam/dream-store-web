@@ -1,33 +1,26 @@
+import { CATEGORIES_LIST } from "@/lib/data/products";
 import Link from "next/link";
-import { getCategories } from "@/lib/api/catalog";
-import { HideOnHome } from "./hide-on-home";
 
-/** Text-link category bar under the header (md and up); the home page has its icon strip instead. */
-export async function CategoryNav() {
-  const categories = await getCategories().catch(() => []);
-  if (categories.length === 0) return null;
-
+export function CategoryNav() {
   return (
-    <HideOnHome>
-      <nav aria-label="Categories" className="hidden bg-white shadow-soft md:block">
-        <ul className="scrollbar-none mx-auto flex max-w-[1280px] items-center gap-8 overflow-x-auto px-4">
-          <li className="shrink-0">
-            <Link href="/products" className="block py-2.5 text-sm font-semibold hover:text-primary">
-              All products
-            </Link>
-          </li>
-          {categories.map((category) => (
-            <li key={category._id} className="shrink-0">
+    <nav
+      aria-label="Categories"
+      className="border-b border-neutral-200/80 bg-white/95 backdrop-blur-xs shadow-xs"
+    >
+      <div className="mx-auto max-w-[1360px] px-4">
+        <ul className="scrollbar-none flex items-center gap-1 sm:gap-2 overflow-x-auto py-1.5 text-xs sm:text-sm font-medium text-neutral-600">
+          {CATEGORIES_LIST.map((cat) => (
+            <li key={cat.id} className="shrink-0">
               <Link
-                href={`/products?category=${encodeURIComponent(category.name)}`}
-                className="block py-2.5 text-sm font-semibold capitalize hover:text-primary"
+                href={cat.path}
+                className="inline-block rounded-md px-3 py-1.5 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:bg-neutral-100 focus-visible:outline-hidden"
               >
-                {category.name}
+                {cat.name}
               </Link>
             </li>
           ))}
         </ul>
-      </nav>
-    </HideOnHome>
+      </div>
+    </nav>
   );
 }

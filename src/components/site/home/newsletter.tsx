@@ -1,9 +1,8 @@
 "use client";
 
+import { subscribe } from "@/app/actions/newsletter";
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
-import { subscribe } from "@/app/actions/newsletter";
-import { Button } from "@/components/ui/button";
 
 export function Newsletter() {
   const [state, action, pending] = useActionState(subscribe, undefined);
@@ -16,13 +15,24 @@ export function Newsletter() {
     <section className="bg-white shadow-soft">
       <div className="mx-auto flex max-w-[1280px] flex-col gap-4 px-4 py-6 md:flex-row md:items-center md:justify-between md:gap-10">
         <div>
-          <h2 className="font-display text-lg font-bold">Get new arrivals in your inbox</h2>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            Occasional emails about new products. Nothing else.
+          <h2 className="font-sans text-xl font-bold text-neutral-900">
+            Get notified about things you probably don&apos;t need.
+          </h2>
+          <p className="mt-1 text-xs sm:text-sm text-neutral-500">
+            Occasional dispatches regarding newly discovered anomalies.
+            Unsubscribe whenever reality permits.
           </p>
         </div>
         <div className="w-full md:max-w-md">
-          <form action={action} className="flex">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              toast.success("Subscribed to questionable dispatches.", {
+                description: "Prepare for unwarranted correspondence.",
+              });
+            }}
+            className="flex"
+          >
             <label htmlFor="newsletter-email" className="sr-only">
               Email address
             </label>
@@ -31,19 +41,22 @@ export function Newsletter() {
               name="email"
               type="email"
               required
-              maxLength={254}
-              defaultValue={state?.email}
-              aria-invalid={state?.error ? true : undefined}
-              aria-describedby={state?.error ? "newsletter-error" : undefined}
-              placeholder="Enter your email"
-              className="h-11 min-w-0 flex-1 rounded-l-sm border border-r-0 border-outline-variant px-4 text-sm outline-none placeholder:text-on-surface-variant/60 focus:border-primary"
+              placeholder="Enter your email..."
+              className="h-11 min-w-0 flex-1 rounded-l-md border border-neutral-300 bg-white px-4 text-xs sm:text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
             />
-            <Button type="submit" className="h-11 rounded-l-none" loading={pending}>
+            <button
+              type="submit"
+              className="h-11 rounded-r-md bg-neutral-900 px-5 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-indigo-600"
+            >
               Subscribe
-            </Button>
+            </button>
           </form>
           {state?.error && (
-            <p id="newsletter-error" role="alert" className="mt-2 text-sm text-error">
+            <p
+              id="newsletter-error"
+              role="alert"
+              className="mt-2 text-sm text-error"
+            >
               {state.error}
             </p>
           )}

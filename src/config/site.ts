@@ -1,27 +1,26 @@
 /**
- * Everything that names the brand lives here, so renaming the store
- * (Dream Store / Imagination Store / ...) is a one-file change.
+ * Y-Combinonsense brand configuration.
+ * A marketplace for objects, ideas, and other questionable necessities.
  */
 export const siteConfig = {
-  /** Shown in the header, page titles and the admin sidebar. */
-  name: "Dream Store",
-  /** Shown in the footer and on the auth pages. */
-  companyName: "Impossible Co.",
-  tagline: "Own What Shouldn't Be Owned.",
+  /** Shown in the header, page titles and meta. */
+  name: "Y-Combinonsense",
+  /** Shown in the footer and official invoices. */
+  companyName: "Y-Combinonsense Marketplace Corp.",
+  tagline: "Things you didn't know you needed.",
   description:
-    "Premium bottled experiences, certified feelings, and other essentials for the discerning absurd-ist.",
-  /**
-   * Where customers can reach you. Leave empty until you have one; the support
-   * page shows a "stand-in" notice while this is unset.
-   */
-  supportEmail: "" as string,
+    "A marketplace for objects, ideas, and other questionable necessities. Completely serious e-commerce for impossible products.",
+  supportEmail: "inquiries@y-combinonsense.com",
   currency: "USD",
   locale: "en-US",
 } as const;
 
 export const navLinks = [
   { href: "/", label: "Home" },
+  { href: "/products", label: "Catalog" },
   { href: "/categories", label: "Categories" },
+  { href: "/wishlist", label: "Wishlist" },
+  { href: "/orders", label: "Orders" },
   { href: "/account", label: "Account" },
   { href: "/cart", label: "Cart" },
 ] as const;

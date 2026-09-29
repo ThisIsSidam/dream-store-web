@@ -1,51 +1,55 @@
 @import "tailwindcss";
 
 /*
- * Design tokens. The brand colours come from the Flutter app; surfaces and outlines
- * were retuned to a neutral grey palette for the store look.
+ * Design tokens for Y-Combinonsense:
+ * Clean, white-first, professional marketplace aesthetic with restrained electric violet accent.
  */
 @theme {
-  --color-surface: #f1f3f6;
-  --color-on-surface: #212121;
+  --color-surface: #ffffff;
+  --color-on-surface: #171717;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f6f7f9;
-  --color-surface-container: #eef0f3;
-  --color-surface-container-high: #e8eaee;
-  --color-surface-container-highest: #e1e4e9;
-  --color-on-surface-variant: #565b66;
-  --color-outline: #878d99;
-  --color-outline-variant: #d7dbe2;
+  --color-surface-container-low: #fafaf9;
+  --color-surface-container: #f7f7f5;
+  --color-surface-container-high: #f0f0ee;
+  --color-surface-container-highest: #e5e5e3;
+  --color-on-surface-variant: #6b7280;
+  --color-outline: #d1d5db;
+  --color-outline-variant: #e5e7eb;
 
-  --color-primary: #ae2f34;
+  /* Primary accent: restrained electric violet / indigo */
+  --color-primary: #4f46e5;
   --color-on-primary: #ffffff;
-  --color-primary-container: #ff6b6b;
-  --color-on-primary-container: #6d0010;
+  --color-primary-container: #eef2ff;
+  --color-on-primary-container: #3730a3;
+  --color-primary-hover: #4338ca;
 
-  --color-secondary: #006a65;
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #79f3ea;
-  --color-on-secondary-container: #006f69;
+  /* Mystery dark surface for intentional high-contrast sections */
+  --color-mystery: #0f1117;
+  --color-mystery-card: #181c26;
+  --color-mystery-border: #262c3d;
 
-  --color-tertiary: #785a00;
-  --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #be9631;
-  --color-on-tertiary-container: #433000;
+  /* Storefront action colours */
+  --color-cta: #4f46e5;
+  --color-buy: #18181b;
+  --color-success: #059669;
+  --color-success-bg: #ecfdf5;
+  --color-warning: #d97706;
+  --color-footer: #111318;
 
-  /* Storefront action colours: add to cart / buy now, in-stock green, footer navy */
-  --color-cta: #ff9f00;
-  --color-buy: #fb641b;
-  --color-success: #388e3c;
-  --color-footer: #1d2233;
-
-  --color-error: #ba1a1a;
+  --color-error: #dc2626;
   --color-on-error: #ffffff;
 
-  --font-sans: var(--font-work-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-display:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
 
-  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.08);
-  --shadow-card: 0 1px 3px rgb(0 0 0 / 0.12);
-  --shadow-float: 0 4px 16px rgb(0 0 0 / 0.16);
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-float:
+    0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
   --breakpoint-xs: 620px;
 
@@ -83,7 +87,8 @@ body {
 }
 
 :focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--color-primary-container) 70%, transparent);
+  outline: 3px solid
+    color-mix(in srgb, var(--color-primary-container) 70%, transparent);
   outline-offset: 2px;
 }
 
@@ -132,4 +137,3 @@ body {
     display: none;
   }
 }
-

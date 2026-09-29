@@ -18,6 +18,19 @@ export type Product = {
   minPrice: number | null;
   maxPrice: number | null;
   totalStock: number;
+  slug?: string;
+  rating?: number;
+  reviewCount?: number;
+  badge?: string;
+  oddness?: string;
+  shortDescription?: string;
+  visualId?: string;
+  originalPrice?: number;
+  isLimited?: boolean;
+  scarcityNote?: string;
+  specifications?: Record<string, string>;
+  whatsIncluded?: string[];
+  frequentlyBoughtTogether?: string[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -28,6 +41,7 @@ export type Variant = {
   attributes: Record<string, string>;
   price: number;
   stock: number;
+  name?: string;
   sku?: string | null;
   createdAt?: string;
   updatedAt?: string;

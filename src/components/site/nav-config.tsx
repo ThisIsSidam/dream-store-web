@@ -1,4 +1,4 @@
-import { Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
+import { Heart, Home, LayoutGrid, Search, User } from "lucide-react";
 
 export const navItems = [
   { href: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
@@ -6,7 +6,20 @@ export const navItems = [
     href: "/categories",
     label: "Categories",
     icon: LayoutGrid,
-    match: (p: string) => p.startsWith("/categories") || p.startsWith("/products") || p.startsWith("/product/"),
+    match: (p: string) =>
+      p.startsWith("/categories") || p.startsWith("/products"),
+  },
+  {
+    href: "/search",
+    label: "Search",
+    icon: Search,
+    match: (p: string) => p.startsWith("/search"),
+  },
+  {
+    href: "/wishlist",
+    label: "Wishlist",
+    icon: Heart,
+    match: (p: string) => p.startsWith("/wishlist"),
   },
   {
     href: "/account",
@@ -14,5 +27,4 @@ export const navItems = [
     icon: User,
     match: (p: string) => p.startsWith("/account") || p.startsWith("/orders"),
   },
-  { href: "/cart", label: "Cart", icon: ShoppingCart, match: (p: string) => p.startsWith("/cart") || p.startsWith("/checkout") },
 ] as const;

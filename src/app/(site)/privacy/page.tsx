@@ -1,37 +1,32 @@
-import type { Metadata } from "next";
 import { InfoPage } from "@/components/site/info-page";
+import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Privacy policy" };
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "Official Privacy Policy of Y-Combinonsense Marketplace Corp.",
+};
 
 export default function PrivacyPage() {
   return (
     <InfoPage
-      title="Privacy policy"
-      intro="What we collect and why."
+      title="Privacy Policy"
+      intro="How we collect, store, and conspicuously ignore your personal data."
       sections={[
         {
-          heading: "What we keep",
-          body: "Your name, email address and order history, so that you can sign in and see your orders. Passwords are stored hashed, never in plain text.",
+          heading: "Information We Collect",
+          body: "We collect only what is strictly necessary to route packages to your physical doorstep: name, shipping address, telephone number, and payment verification tokens. We do not track what you do with the Portable Hole after it leaves our possession.",
         },
         {
-          heading: "Your cart",
-          body: "If you shop without an account, a random identifier in a cookie keeps your cart between visits. Sign up and the cart comes with you.",
+          heading: "Use of Cookies",
+          body: "We use lightweight session cookies to ensure your cart survives between browser tabs. We do not use third-party behavioral trackers or psychological profiling algorithms.",
         },
         {
-          heading: "Cookies",
-          body: "Signing in sets one session cookie, which the site can read but your browser scripts cannot, and it expires after seven days. Shopping as a guest sets one random identifier that lasts a year. We use no advertising or analytics cookies.",
+          heading: "Third-Party Logistics Sharing",
+          body: "Your address is shared with our contracted freight carriers. Delivery couriers are legally bound to deliver the sealed box without opening it, smelling it, or asking philosophical questions about its weight.",
         },
         {
-          heading: "Newsletter",
-          body: "If you subscribe, we store your email address and the date, and nothing else. You can ask us to remove it at any time.",
-        },
-        {
-          heading: "Images",
-          body: "Images are loaded from third-party hosts (Cloudinary and Google), so your browser contacts them to display the page.",
-        },
-        {
-          heading: "Placeholder",
-          body: "This page describes what the site does today. It is not a legal policy: add retention periods, your legal entity, how to exercise data rights and any payment provider once you have chosen one.",
+          heading: "Your Data Rights",
+          body: "You have the right to request full erasure of your account and order history at any time. However, artifacts already delivered cannot be un-owned through digital database manipulation.",
         },
       ]}
     />

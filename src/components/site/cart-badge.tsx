@@ -1,20 +1,20 @@
 "use client";
 
-import { useCart } from "@/lib/client/use-cart";
+import { useStore } from "@/lib/client/store";
 import { cn } from "@/lib/utils";
 
 export function CartBadge({ className }: { className?: string }) {
-  const { itemCount } = useCart();
-  if (itemCount <= 0) return null;
+  const { cartCount } = useStore();
+  if (cartCount <= 0) return null;
   return (
     <span
       className={cn(
-        "t-caption absolute grid min-h-4 min-w-4 place-items-center rounded-full border border-white bg-cta px-1 text-[10px] leading-none text-white",
+        "absolute -top-1.5 -right-2 grid min-h-4 min-w-4 place-items-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold leading-none text-white shadow-xs",
         className,
       )}
-      aria-label={`${itemCount} items in cart`}
+      aria-label={`${cartCount} items in cart`}
     >
-      {itemCount > 99 ? "99+" : itemCount}
+      {cartCount > 99 ? "99+" : cartCount}
     </span>
   );
 }

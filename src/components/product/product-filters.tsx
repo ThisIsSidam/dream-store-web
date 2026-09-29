@@ -1,137 +1,271 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import type { ListingFilters } from "@/lib/products";
-import { cn, pageHref } from "@/lib/utils";
+import { pageHref } from "@/lib/utils";
+import { SlidersHorizontal, Star } from "lucide-react";
+import Link from "next/link";
 
 type Props = {
   pathname: string;
-  /** Params that identify the listing itself and survive filtering (`q`, `category`, `sort`). */
   params: Record<string, string | undefined>;
   filters: ListingFilters;
-  /** Category names to offer (only for the catalogue page). */
   categories?: string[];
   activeCategory?: string;
 };
 
-const heading = "text-xs font-bold uppercase tracking-wide text-on-surface-variant";
-const input =
-  "h-9 w-full min-w-0 rounded-sm border border-outline-variant bg-white px-2.5 text-sm outline-none focus:border-primary";
+const ODDNESS_OPTIONS = [
+  "Completely Normal",
+  "Slightly Strange",
+  "Very Strange",
+  "We Should Probably Investigate",
+];
 
-function FilterForm({ pathname, params, filters, categories, activeCategory }: Props) {
-  const hasFilters = filters.min !== undefined || filters.max !== undefined || filters.inStock;
-  const kept = Object.entries(params).filter(([key, value]) => value && key !== "category");
+const QUICK_FILTERS = [
+  { label: "All Items", key: "badge", value: undefined },
+  { label: "New Arrivals", key: "badge", value: "new" },
+  { label: "Best Sellers", key: "badge", value: "bestseller" },
+  { label: "Limited Drops", key: "badge", value: "limited" },
+];
+
+export function ProductFilters(props: Props) {
+  const { pathname, params, filters, categories, activeCategory } = props;
+  const hasActiveFilters =
+    filters.min !== undefined ||
+    filters.max !== undefined ||
+    filters.inStock ||
+    filters.oddness !== undefined ||
+    filters.badge !== undefined ||
+    filters.minRating !== undefined;
+
+  const keptParams = Object.entries(params).filter(
+    ([k, v]) =>
+      v &&
+      k !== "category" &&
+      k !== "min" &&
+      k !== "max" &&
+      k !== "stock" &&
+      k !== "oddness" &&
+      k !== "badge" &&
+      k !== "rating",
+  );
 
   return (
-    <div className="flex flex-col divide-y divide-outline-variant/40">
-      {categories && categories.length > 0 && (
-        <div className="p-4">
-          <h3 className={heading}>Categories</h3>
-          <ul className="mt-3 flex flex-col gap-0.5 text-sm">
-            <li>
-              <Link
-                href={pageHref(pathname, { ...Object.fromEntries(kept), min: filters.min, max: filters.max, stock: filters.inStock ? 1 : undefined })}
-                className={cn("block rounded-sm px-2 py-1.5 hover:bg-surface-container-low", !activeCategory && "font-bold text-primary")}
-              >
-                All products
-              </Link>
-            </li>
-            {categories.map((name) => (
-              <li key={name}>
-                <Link
-                  href={pageHref(pathname, {
-                    ...Object.fromEntries(kept),
-                    category: name,
-                    min: filters.min,
-                    max: filters.max,
-                    stock: filters.inStock ? 1 : undefined,
-                  })}
-                  aria-current={activeCategory === name ? "page" : undefined}
-                  className={cn(
-                    "block rounded-sm px-2 py-1.5 capitalize hover:bg-surface-container-low",
-                    activeCategory === name && "font-bold text-primary",
-                  )}
-                >
-                  {name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <form action={pathname} method="get" className="flex flex-col gap-5 p-4">
-        {Object.entries(params).map(([key, value]) =>
-          value ? <input key={key} type="hidden" name={key} value={value} /> : null,
-        )}
-        <fieldset>
-          <legend className={heading}>Price</legend>
-          <div className="mt-3 flex items-center gap-2">
-            <input
-              name="min"
-              type="number"
-              inputMode="decimal"
-              min={0}
-              step="any"
-              placeholder="Min"
-              aria-label="Minimum price"
-              defaultValue={filters.min}
-              className={input}
-            />
-            <span className="text-on-surface-variant">to</span>
-            <input
-              name="max"
-              type="number"
-              inputMode="decimal"
-              min={0}
-              step="any"
-              placeholder="Max"
-              aria-label="Maximum price"
-              defaultValue={filters.max}
-              className={input}
-            />
-          </div>
-        </fieldset>
-        <fieldset>
-          <legend className={heading}>Availability</legend>
-          <label className="mt-3 flex cursor-pointer items-center gap-2.5 text-sm">
-            <input type="checkbox" name="stock" value="1" defaultChecked={filters.inStock} className="size-4 accent-primary" />
-            Exclude out of stock
-          </label>
-        </fieldset>
-        <div className="flex items-center gap-3">
-          <Button type="submit" size="sm">
-            Apply
-          </Button>
-          {hasFilters && (
-            <Link
-              href={pageHref(pathname, params)}
-              className="text-sm font-semibold text-primary hover:underline"
-            >
-              Clear
-            </Link>
+    <>
+      {/* Mobile Collapsible Drawer */}
+      <details className="rounded-lg border border-neutral-200 bg-white shadow-xs lg:hidden mb-4">
+        <summary className="flex cursor-pointer items-center justify-between p-3.5 text-xs font-bold uppercase tracking-wider text-neutral-800">
+          <span className="flex items-center gap-2">
+            <SlidersHorizontal className="size-4 text-indigo-600" />
+            Filter Questionable Products
+          </span>
+          {hasActiveFilters && (
+            <span className="size-2 rounded-full bg-indigo-600" />
           )}
+        </summary>
+        <div className="border-t border-neutral-100 p-4">
+          <FilterFormContent {...props} />
         </div>
-      </form>
-    </div>
+      </details>
+
+      {/* Desktop Sticky Sidebar */}
+      <aside aria-label="Filters" className="hidden lg:block">
+        <div className="sticky top-20 rounded-lg border border-neutral-200/90 bg-white p-5 shadow-xs">
+          <div className="flex items-center justify-between pb-3.5 border-b border-neutral-100">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900 flex items-center gap-2">
+              <SlidersHorizontal className="size-4 text-indigo-600" />
+              Filters
+            </h2>
+            {hasActiveFilters && (
+              <Link
+                href={pageHref(pathname, Object.fromEntries(keptParams))}
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
+              >
+                Reset
+              </Link>
+            )}
+          </div>
+          <FilterFormContent {...props} />
+        </div>
+      </aside>
+    </>
   );
 }
 
-/** Filter panel: a collapsible block on small screens, a sticky sidebar from lg. */
-export function ProductFilters(props: Props) {
+function FilterFormContent({
+  pathname,
+  params,
+  filters,
+  categories,
+  activeCategory,
+}: Props) {
   return (
-    <>
-      <details className="bg-white shadow-soft lg:hidden">
-        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-bold uppercase tracking-wide">
-          Filters
-        </summary>
-        <div className="border-t border-outline-variant/40">
-          <FilterForm {...props} />
+    <form
+      action={pathname}
+      method="get"
+      className="flex flex-col gap-6 pt-4 text-xs"
+    >
+      {/* Retain other search params like q or sort */}
+      {Object.entries(params).map(([key, value]) =>
+        value &&
+        key !== "min" &&
+        key !== "max" &&
+        key !== "stock" &&
+        key !== "oddness" &&
+        key !== "badge" &&
+        key !== "rating" ? (
+          <input key={key} type="hidden" name={key} value={value} />
+        ) : null,
+      )}
+
+      {/* Category selector */}
+      {categories && categories.length > 0 && (
+        <fieldset>
+          <legend className="font-bold uppercase tracking-wider text-neutral-900 mb-2.5">
+            Category
+          </legend>
+          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
+            <label className="flex items-center gap-2 py-0.5 cursor-pointer text-neutral-700 hover:text-neutral-950">
+              <input
+                type="radio"
+                name="category"
+                value=""
+                defaultChecked={!activeCategory}
+                className="size-3.5 accent-indigo-600"
+              />
+              <span>All Categories</span>
+            </label>
+            {categories.map((cat) => (
+              <label
+                key={cat}
+                className="flex items-center gap-2 py-0.5 cursor-pointer text-neutral-700 hover:text-neutral-950"
+              >
+                <input
+                  type="radio"
+                  name="category"
+                  value={cat}
+                  defaultChecked={
+                    activeCategory?.toLowerCase() === cat.toLowerCase()
+                  }
+                  className="size-3.5 accent-indigo-600"
+                />
+                <span className="capitalize">{cat}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
+      {/* Oddness Filter (Section 14 explicit requirement) */}
+      <fieldset className="border-t border-neutral-100 pt-4">
+        <legend className="font-bold uppercase tracking-wider text-neutral-900 mb-2.5">
+          Oddness Level
+        </legend>
+        <div className="flex flex-col gap-1.5">
+          <label className="flex items-center gap-2 py-0.5 cursor-pointer text-neutral-700 hover:text-neutral-950">
+            <input
+              type="radio"
+              name="oddness"
+              value=""
+              defaultChecked={!filters.oddness}
+              className="size-3.5 accent-indigo-600"
+            />
+            <span>Any Level</span>
+          </label>
+          {ODDNESS_OPTIONS.map((level) => (
+            <label
+              key={level}
+              className="flex items-center gap-2 py-0.5 cursor-pointer text-neutral-700 hover:text-neutral-950"
+            >
+              <input
+                type="radio"
+                name="oddness"
+                value={level}
+                defaultChecked={
+                  filters.oddness?.toLowerCase() === level.toLowerCase()
+                }
+                className="size-3.5 accent-indigo-600"
+              />
+              <span>{level}</span>
+            </label>
+          ))}
         </div>
-      </details>
-      <aside aria-label="Filters" className="hidden bg-white shadow-soft lg:block">
-        <h2 className="border-b border-outline-variant/40 px-4 py-3 text-lg font-bold">Filters</h2>
-        <FilterForm {...props} />
-      </aside>
-    </>
+      </fieldset>
+
+      {/* Price Range Filter */}
+      <fieldset className="border-t border-neutral-100 pt-4">
+        <legend className="font-bold uppercase tracking-wider text-neutral-900 mb-2.5">
+          Price Range ($)
+        </legend>
+        <div className="flex items-center gap-2">
+          <input
+            name="min"
+            type="number"
+            min={0}
+            placeholder="Min"
+            defaultValue={filters.min}
+            className="h-8 w-full rounded border border-neutral-300 bg-white px-2.5 text-xs text-neutral-900 outline-none focus:border-indigo-600"
+          />
+          <span className="text-neutral-400">to</span>
+          <input
+            name="max"
+            type="number"
+            min={0}
+            placeholder="Max"
+            defaultValue={filters.max}
+            className="h-8 w-full rounded border border-neutral-300 bg-white px-2.5 text-xs text-neutral-900 outline-none focus:border-indigo-600"
+          />
+        </div>
+      </fieldset>
+
+      {/* Availability / Stock */}
+      <fieldset className="border-t border-neutral-100 pt-4">
+        <legend className="font-bold uppercase tracking-wider text-neutral-900 mb-2.5">
+          Availability
+        </legend>
+        <label className="flex items-center gap-2 cursor-pointer text-neutral-700 hover:text-neutral-950">
+          <input
+            type="checkbox"
+            name="stock"
+            value="1"
+            defaultChecked={filters.inStock}
+            className="size-3.5 rounded accent-indigo-600"
+          />
+          <span>In Stock Only</span>
+        </label>
+      </fieldset>
+
+      {/* Minimum Rating */}
+      <fieldset className="border-t border-neutral-100 pt-4">
+        <legend className="font-bold uppercase tracking-wider text-neutral-900 mb-2.5">
+          Customer Rating
+        </legend>
+        <div className="flex flex-col gap-1.5">
+          {[4, 4.5].map((stars) => (
+            <label
+              key={stars}
+              className="flex items-center gap-2 cursor-pointer text-neutral-700 hover:text-neutral-950"
+            >
+              <input
+                type="radio"
+                name="rating"
+                value={stars}
+                defaultChecked={filters.minRating === stars}
+                className="size-3.5 accent-indigo-600"
+              />
+              <span className="flex items-center gap-1">
+                <span>{stars}★ and above</span>
+                <Star className="size-3 fill-amber-400 text-amber-400 inline" />
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {/* Submit Button */}
+      <button
+        type="submit"
+        className="mt-2 w-full rounded-md bg-neutral-900 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-600"
+      >
+        Apply Filters
+      </button>
+    </form>
   );
 }

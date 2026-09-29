@@ -1,65 +1,153 @@
 import Link from "next/link";
-import { siteConfig } from "@/config/site";
+import { BrandMark } from "./brand";
 
-const columns = [
-  {
-    title: "Shop",
-    links: [
-      { href: "/products", label: "All products" },
-      { href: "/categories", label: "Categories" },
-      { href: "/cart", label: "Cart" },
-    ],
-  },
-  {
-    title: "Help",
-    links: [
-      { href: "/orders", label: "Your orders" },
-      { href: "/support", label: "Support" },
-      { href: "/returns", label: "Returns" },
-    ],
-  },
-  {
-    title: "About",
-    links: [
-      { href: "/about", label: "About us" },
-      { href: "/privacy", label: "Privacy" },
-    ],
-  },
+const SHOP_LINKS = [
+  { href: "/products", label: "All Products" },
+  { href: "/products?filter=new", label: "New Arrivals" },
+  { href: "/products?filter=bestseller", label: "Best Sellers" },
+  { href: "/products?filter=limited", label: "Limited Drops" },
+  { href: "/categories", label: "Categories" },
+];
+
+const HELP_LINKS = [
+  { href: "/support", label: "Contact & FAQs" },
+  { href: "/support#shipping", label: "Shipping Information" },
+  { href: "/returns", label: "Returns Policy" },
+  { href: "/orders", label: "Order Tracking" },
+  { href: "/support#temporal", label: "Temporal Assistance" },
+];
+
+const COMPANY_LINKS = [
+  { href: "/about", label: "About Us" },
+  { href: "/about#story", label: "Our Story" },
+  { href: "/about#careers", label: "Careers (Theoretical)" },
+  { href: "/about#press", label: "Press & Inquiries" },
+];
+
+const LEGAL_LINKS = [
+  { href: "/privacy", label: "Privacy Policy" },
+  { href: "/returns#terms", label: "Terms of Service" },
+  { href: "/returns", label: "Refund Policy" },
 ];
 
 export function SiteFooter() {
   return (
-    <footer className="mt-auto bg-footer text-white/80 max-xs:pb-14">
-      <div className="mx-auto grid max-w-[1280px] gap-10 px-4 py-10 sm:grid-cols-2 md:grid-cols-[repeat(3,1fr)_1.6fr]">
-        {columns.map(({ title, links }) => (
-          <div key={title}>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">{title}</h2>
-            <ul className="mt-4 flex flex-col gap-2.5 text-sm">
-              {links.map((link) => (
+    <footer className="mt-auto border-t border-neutral-800 bg-neutral-950 text-neutral-400">
+      <div className="mx-auto max-w-[1360px] px-4 py-14">
+        {/* Top brand header in footer */}
+        <div className="mb-12 pb-10 border-b border-neutral-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <BrandMark className="size-9" />
+            <div>
+              <p className="font-sans text-lg font-bold text-white tracking-tight">
+                Y-Combinonsense
+              </p>
+              <p className="text-xs text-neutral-400">
+                A marketplace for objects, ideas, and other questionable
+                necessities.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-4 py-2 text-xs font-mono text-neutral-400">
+            CATALOG INTEGRITY:{" "}
+            <span className="text-emerald-400 font-semibold">97.4%</span> •
+            REALITY DRIFT:{" "}
+            <span className="text-indigo-400 font-semibold">0.02s</span>
+          </div>
+        </div>
+
+        {/* 4 Column Marketplace Directory */}
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:gap-12">
+          {/* Column 1: Shop */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
+              Shop
+            </h3>
+            <ul className="mt-4 space-y-2.5 text-xs sm:text-sm">
+              {SHOP_LINKS.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="hover:text-white hover:underline">
+                  <Link
+                    href={link.href}
+                    className="hover:text-white transition-colors"
+                  >
                     {link.label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
-        ))}
-        <div className="sm:col-span-2 md:col-span-1 md:border-l md:border-white/15 md:pl-10">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">Contact</h2>
-          <p className="mt-4 text-sm font-semibold text-white">{siteConfig.companyName}</p>
-          <p className="mt-2 text-sm">{siteConfig.description}</p>
-          {siteConfig.supportEmail && (
-            <a href={`mailto:${siteConfig.supportEmail}`} className="mt-3 inline-block text-sm text-white hover:underline">
-              {siteConfig.supportEmail}
-            </a>
-          )}
+
+          {/* Column 2: Help */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
+              Help
+            </h3>
+            <ul className="mt-4 space-y-2.5 text-xs sm:text-sm">
+              {HELP_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="hover:text-white transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Column 3: Company */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
+              Company
+            </h3>
+            <ul className="mt-4 space-y-2.5 text-xs sm:text-sm">
+              {COMPANY_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="hover:text-white transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Column 4: Legal */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
+              Legal
+            </h3>
+            <ul className="mt-4 space-y-2.5 text-xs sm:text-sm">
+              {LEGAL_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="hover:text-white transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      </div>
-      <div className="border-t border-white/15">
-        <p className="mx-auto max-w-[1280px] px-4 py-4 text-xs text-white/60">
-          © {new Date().getFullYear()} {siteConfig.companyName} All rights reserved.
-        </p>
+
+        {/* Bottom copyright line and deadpan footnotes */}
+        <div className="mt-14 pt-8 border-t border-neutral-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-400">
+          <div>
+            <span>Y-Combinonsense © 2026.</span>{" "}
+            <span className="italic text-neutral-400">
+              Probably a real company.
+            </span>
+          </div>
+
+          <div className="text-neutral-400 text-center sm:text-right text-[11px]">
+            Some products may not be fully understood.
+          </div>
+        </div>
       </div>
     </footer>
   );
