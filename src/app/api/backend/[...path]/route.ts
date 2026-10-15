@@ -19,11 +19,26 @@ const ALLOWED = [
   /^cart$/,
   /^cart\/add$/,
   /^cart\/items\/[0-9a-f]{24}$/i,
+  /^cart\/coupon$/,
+  /^cart\/save-for-later\/[0-9a-f]{24}$/i,
+  /^cart\/move-to-cart\/[0-9a-f]{24}$/i,
   /^orders$/,
   /^orders\/(buy-now|confirm-payment|payment-failed)$/,
   /^orders\/[0-9a-f]{24}$/i,
+  /^products$/,
   /^products\/search$/,
+  /^products\/[^/]+$/,
+  /^products\/[^/]+\/reviews$/,
+  /^reviews\/[^/]+\/helpful$/,
+  /^home\/banners$/,
+  /^home\/categories$/,
+  /^home\/sections(\/[^/]+)?$/,
+  /^newsletter\/subscribe$/,
+  /^users\/wishlist(\/[^/]+)?$/,
+  /^users\/addresses(\/[^/]+)?$/,
+  /^users\/me$/,
 ];
+
 
 const DEAD_TOKEN = /invalid or expired token|user not found|invalid token/i;
 
@@ -89,4 +104,11 @@ async function handler(request: NextRequest, ctx: RouteContext<"/api/backend/[..
   return response;
 }
 
-export { handler as GET, handler as POST, handler as DELETE };
+export {
+  handler as GET,
+  handler as POST,
+  handler as PUT,
+  handler as PATCH,
+  handler as DELETE,
+};
+

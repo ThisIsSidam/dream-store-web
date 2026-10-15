@@ -2,14 +2,12 @@
 
 import { ProductCard } from "@/components/product/product-card";
 import { useStore } from "@/lib/client/store";
-import { YC_PRODUCTS, toStoreProduct } from "@/lib/data/products";
+import type { Product } from "@/lib/api/types";
 
 export function RecentlyViewed() {
-  const { recentlyViewed } = useStore();
+  const { recentlyViewedProducts } = useStore();
 
-  const products = recentlyViewed
-    .map((id) => YC_PRODUCTS.find((p) => p.id === id || p._id === id))
-    .filter((p): p is (typeof YC_PRODUCTS)[0] => Boolean(p));
+  const products: Product[] = recentlyViewedProducts || [];
 
   if (products.length === 0) return null;
 
@@ -30,7 +28,7 @@ export function RecentlyViewed() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {products.slice(0, 4).map((p) => (
-            <ProductCard key={p.id} product={toStoreProduct(p)} dense />
+            <ProductCard key={p._id || p.slug} product={p} dense />
           ))}
         </div>
       </div>

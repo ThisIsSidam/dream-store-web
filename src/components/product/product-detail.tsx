@@ -1,14 +1,19 @@
 "use client";
 
 import { ProductVisual } from "@/components/ui/product-visual";
-import type { Product, Variant } from "@/lib/api/types";
+import type { Product, ReviewsResponse, Variant } from "@/lib/api/types";
+import { api, swrFetcher } from "@/lib/client/api";
 import { useStore } from "@/lib/client/store";
-import {
-  getProductBySlugOrId,
-  YC_PRODUCTS,
-  type CatalogProduct,
-  type CatalogReview,
-} from "@/lib/data/products";
+export interface CatalogReview {
+  id: string;
+  author: string;
+  rating: number;
+  date: string;
+  title: string;
+  comment: string;
+  verified: boolean;
+  helpfulCount: number;
+}
 import { cn, formatPrice } from "@/lib/utils";
 import {
   Award,
@@ -29,25 +34,32 @@ import {
   Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import useSWR from "swr";
 
 interface ProductDetailProps {
   product: Product;
   variants: Variant[];
+  bundleProducts?: Product[];
 }
 
-export function ProductDetail({ product, variants }: ProductDetailProps) {
+export function ProductDetail({
+  product,
+  variants,
+  bundleProducts,
+}: ProductDetailProps) {
   const router = useRouter();
-  const { addToCart, toggleWishlist, isInWishlist } = useStore();
+  const { addToCart, toggleWishlist, isInWishlist, recordView } = useStore();
 
-  const catalogItem =
-    getProductBySlugOrId(product._id) ||
-    getProductBySlugOrId(product.slug || "") ||
-    (product as unknown as CatalogProduct);
+  useEffect(() => {
+    if (product?._id) {
+      recordView(product._id, product);
+    }
+  }, [product, recordView]);
 
   const [selectedVariantId, setSelectedVariantId] = useState(
-    variants[0]?._id || catalogItem.variants?.[0]?.id || "default",
+    variants[0]?._id || "default",
   );
   const [quantity, setQuantity] = useState(1);
   const [activeAngle, setActiveAngle] = useState<
@@ -55,21 +67,50 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
   >("front");
   const [zipCode, setZipCode] = useState("");
   const [zipChecked, setZipChecked] = useState(false);
-  const [userReviews, setUserReviews] = useState<CatalogReview[]>(
-    catalogItem.reviews || [],
+  const { data: reviewsData, mutate: mutateReviews } = useSWR<ReviewsResponse>(
+    product._id ? `products/${product._id}/reviews` : null,
+    swrFetcher,
+    { revalidateOnFocus: false },
   );
+
+  const [localReviews, setLocalReviews] = useState<CatalogReview[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [newReviewAuthor, setNewReviewAuthor] = useState("");
   const [newReviewTitle, setNewReviewTitle] = useState("");
   const [newReviewComment, setNewReviewComment] = useState("");
   const [newReviewRating, setNewReviewRating] = useState(5);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-  const isWishlisted = isInWishlist(catalogItem.id || product._id);
+  // Live reviews from backend or local session
+  const reviewsList: CatalogReview[] = reviewsData?.reviews?.length
+    ? reviewsData.reviews.map((r) => ({
+        id: r._id,
+        author: r.authorName,
+        rating: r.rating,
+        date: new Date(r.createdAt).toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        }),
+        title: r.title,
+        comment: r.comment,
+        verified: r.isVerifiedPurchase,
+        helpfulCount: r.helpfulCount,
+      }))
+    : localReviews;
+
+  const totalReviewsCount =
+    reviewsData?.summary?.totalReviews ?? (reviewsList.length || product.reviewCount || 0);
+  const avgRating =
+    reviewsData?.summary?.averageRating ?? product.rating ?? 4.8;
+  const ratingCounts: Record<number, number> =
+    reviewsData?.summary?.ratingCounts ?? {};
+
+  const isWishlisted = isInWishlist(product._id);
 
   // Selected variant details
   const activeVariant =
-    catalogItem.variants?.find((v) => v.id === selectedVariantId) ||
-    variants.find((v) => v._id === selectedVariantId);
+    variants.find((v) => v._id === selectedVariantId) || variants[0];
 
   const price = activeVariant
     ? activeVariant.price
@@ -78,22 +119,23 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
   const isSoldOut = stock <= 0;
 
   // Frequently Bought Together Bundle
-  const bundleItemIds = catalogItem.frequentlyBoughtTogether?.slice(0, 2) || [
-    "luxury-cardboard",
-    "extra-tuesday",
-  ];
-  const bundleItems = bundleItemIds
-    .map((id) => YC_PRODUCTS.find((p) => p.id === id))
-    .filter((p): p is CatalogProduct => Boolean(p));
+  const bundleItems: Product[] = bundleProducts || [];
 
   const bundleTotal =
-    price + bundleItems.reduce((acc, item) => acc + item.price, 0);
+    price +
+    bundleItems.reduce((acc, item) => {
+      const itemPrice =
+        typeof item.minPrice === "number"
+          ? item.minPrice
+          : typeof item.maxPrice === "number"
+          ? item.maxPrice
+          : 0;
+      return acc + itemPrice;
+    }, 0);
   const bundleDiscounted = Math.round(bundleTotal * 0.9);
 
   function handleAddToCart() {
-    if (catalogItem) {
-      addToCart(catalogItem, selectedVariantId, quantity);
-    }
+    addToCart(product, selectedVariantId, quantity);
   }
 
   function handleBuyNow() {
@@ -102,20 +144,24 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
   }
 
   function handleAddBundle() {
-    if (catalogItem) {
-      addToCart(catalogItem, selectedVariantId, 1);
-      bundleItems.forEach((item) => addToCart(item, undefined, 1));
-      toast.success("Added bundle to cart with 10% synergy discount!");
-    }
+    addToCart(product, selectedVariantId, 1);
+    bundleItems.forEach((item) => addToCart(item, undefined, 1));
+    toast.success("Added bundle to cart with 10% synergy discount!");
   }
 
-  function handleUpvote(revId: string) {
-    setUserReviews((prev) =>
-      prev.map((r) =>
-        r.id === revId ? { ...r, helpfulCount: r.helpfulCount + 1 } : r,
-      ),
-    );
-    toast.message("Helpful vote recorded.");
+  async function handleUpvote(revId: string) {
+    try {
+      await api(`reviews/${revId}/helpful`, { method: "POST" });
+      await mutateReviews();
+      toast.message("Helpful vote recorded.");
+    } catch {
+      setLocalReviews((prev) =>
+        prev.map((r) =>
+          r.id === revId ? { ...r, helpfulCount: r.helpfulCount + 1 } : r,
+        ),
+      );
+      toast.message("Helpful vote recorded.");
+    }
   }
 
   function handleCheckZip(e: React.FormEvent) {
@@ -126,28 +172,38 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
     }
   }
 
-  function handleReviewSubmit(e: React.FormEvent) {
+  async function handleReviewSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!newReviewAuthor || !newReviewTitle || !newReviewComment) {
       toast.error("Please fill in all review fields.");
       return;
     }
-    const created: CatalogReview = {
-      id: `rev_user_${Date.now()}`,
-      author: newReviewAuthor,
-      title: newReviewTitle,
-      comment: newReviewComment,
-      rating: newReviewRating,
-      date: "Just now",
-      verified: true,
-      helpfulCount: 0,
-    };
-    setUserReviews([created, ...userReviews]);
-    setShowReviewModal(false);
-    setNewReviewAuthor("");
-    setNewReviewTitle("");
-    setNewReviewComment("");
-    toast.success("Review published. Thank you for your questionable honesty.");
+
+    setIsSubmittingReview(true);
+    try {
+      await api(`products/${product._id}/reviews`, {
+        method: "POST",
+        body: {
+          authorName: newReviewAuthor,
+          rating: newReviewRating,
+          title: newReviewTitle,
+          comment: newReviewComment,
+        },
+      });
+      await mutateReviews();
+      setShowReviewModal(false);
+      setNewReviewAuthor("");
+      setNewReviewTitle("");
+      setNewReviewComment("");
+      toast.success(
+        "Review published. Thank you for your questionable honesty.",
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to post review";
+      toast.error(msg);
+    } finally {
+      setIsSubmittingReview(false);
+    }
   }
 
   return (
@@ -168,7 +224,7 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
                 </h4>
                 <p className="mt-2 text-xs font-mono text-neutral-600 max-w-sm">
                   This document certifies that specimen #
-                  {catalogItem.sku || "YC-0001"} was audited under ISO-999
+                  {activeVariant?.sku || variants[0]?.sku || `${(product.slug || "YC").toUpperCase()}-0001`} was audited under ISO-999
                   guidelines and determined to serve no justifiable utilitarian
                   necessity.
                 </p>
@@ -178,17 +234,17 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
               </div>
             ) : (
               <ProductVisual
-                visualId={catalogItem.visualId || "generic"}
+                visualId={product.visualId || product.slug || "generic"}
                 name={product.name}
                 className="size-full"
               />
             )}
 
             {/* Badges on main image */}
-            {catalogItem.badge && (
+            {product.badge && (
               <div className="absolute top-4 left-4 z-20">
                 <span className="rounded bg-neutral-900/90 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-xs">
-                  {catalogItem.badge}
+                  {product.badge}
                 </span>
               </div>
             )}
@@ -271,7 +327,7 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
                 {product.category}
               </span>
               <span className="font-mono">
-                SKU: {catalogItem.sku || "YC-SPEC-001"}
+                SKU: {activeVariant?.sku || variants[0]?.sku || `${(product.slug || "YC").toUpperCase()}-SPEC-001`}
               </span>
             </div>
 
@@ -288,14 +344,14 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
                     key={i}
                     className={cn(
                       "size-4",
-                      i < Math.floor(catalogItem.rating || 5)
+                      i < Math.floor(product.rating || 5)
                         ? "fill-amber-400 text-amber-400"
                         : "fill-neutral-200 text-neutral-200",
                     )}
                   />
                 ))}
                 <span className="ml-1.5 font-bold text-neutral-900">
-                  {(catalogItem.rating || 4.8).toFixed(1)}
+                  {(product.rating || 4.8).toFixed(1)}
                 </span>
               </div>
               <span className="text-neutral-400">•</span>
@@ -303,11 +359,11 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
                 href="#reviews"
                 className="font-medium text-neutral-600 hover:text-indigo-600 hover:underline"
               >
-                {userReviews.length} verified ratings
+                {totalReviewsCount} verified ratings
               </a>
               <span className="text-neutral-400">•</span>
               <span className="rounded bg-neutral-100 px-2 py-0.5 font-medium text-neutral-700">
-                Oddness: {catalogItem.oddness}
+                Oddness: {product.oddness || "Completely Normal"}
               </span>
             </div>
 
@@ -316,9 +372,9 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
               <span className="font-sans text-3xl sm:text-4xl font-extrabold text-neutral-950">
                 {formatPrice(price)}
               </span>
-              {catalogItem.originalPrice && (
+              {product.originalPrice && (
                 <span className="text-sm sm:text-base text-neutral-400 line-through">
-                  {formatPrice(catalogItem.originalPrice)}
+                  {formatPrice(product.originalPrice)}
                 </span>
               )}
               <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
@@ -345,23 +401,23 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
 
             {/* Short Tagline */}
             <p className="mt-4 text-sm text-neutral-600 leading-relaxed">
-              {catalogItem.shortDescription}
+              {product.shortDescription || product.description}
             </p>
 
             {/* Variant Selector */}
-            {catalogItem.variants && catalogItem.variants.length > 0 && (
+            {variants && variants.length > 0 && (
               <div className="mt-6 border-t border-neutral-100 pt-5">
                 <label className="block text-xs font-bold uppercase tracking-wider text-neutral-900 mb-2.5">
                   Select Variant:
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {catalogItem.variants.map((v) => {
-                    const isSelected = selectedVariantId === v.id;
+                  {variants.map((v) => {
+                    const isSelected = selectedVariantId === v._id;
                     return (
                       <button
-                        key={v.id}
+                        key={v._id}
                         type="button"
-                        onClick={() => setSelectedVariantId(v.id)}
+                        onClick={() => setSelectedVariantId(v._id)}
                         className={cn(
                           "rounded-md border px-3.5 py-2 text-xs font-medium transition-all text-left",
                           isSelected
@@ -369,7 +425,7 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
                             : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400 hover:bg-neutral-50",
                         )}
                       >
-                        <span className="block font-semibold">{v.name}</span>
+                        <span className="block font-semibold">{v.name || "Standard"}</span>
                         <span
                           className={cn(
                             "text-[11px]",
@@ -444,7 +500,7 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
                 aria-label={
                   isWishlisted ? "Remove from wishlist" : "Add to wishlist"
                 }
-                onClick={() => toggleWishlist(catalogItem.id || product._id)}
+                onClick={() => toggleWishlist(product._id)}
                 className={cn(
                   "grid size-12 place-items-center rounded-md border transition-colors shrink-0",
                   isWishlisted
@@ -511,7 +567,7 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
             </h2>
             <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-xs">
               <dl className="divide-y divide-neutral-200">
-                {Object.entries(catalogItem.specifications || {}).map(
+                {Object.entries(product.specifications || {}).map(
                   ([key, val], idx) => (
                     <div
                       key={key}
@@ -537,11 +593,13 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
             <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-xs">
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-neutral-700">
                 {(
-                  catalogItem.whatsIncluded || [
-                    "1 × Main Specimen",
-                    "1 × Unnecessary Certificate of Authenticity",
-                    "1 × Instruction Manual (translated into deadpan English)",
-                  ]
+                  product.whatsIncluded && product.whatsIncluded.length > 0
+                    ? product.whatsIncluded
+                    : [
+                        "1 × Main Specimen",
+                        "1 × Unnecessary Certificate of Authenticity",
+                        "1 × Instruction Manual (translated into deadpan English)",
+                      ]
                 ).map((item) => (
                   <li key={item} className="flex items-center gap-2.5">
                     <Check className="size-4 text-emerald-600 shrink-0" />
@@ -569,7 +627,7 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
                   <div className="flex flex-col items-center">
                     <div className="size-20 rounded-lg border border-neutral-200 bg-neutral-50 overflow-hidden">
                       <ProductVisual
-                        visualId={catalogItem.visualId}
+                        visualId={product.visualId || product.slug || "generic"}
                         showStudioLighting={false}
                       />
                     </div>
@@ -583,29 +641,33 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
 
                   <span className="text-lg font-bold text-neutral-400">+</span>
 
-                  {bundleItems.map((bItem, bIdx) => (
-                    <div key={bItem.id} className="flex items-center gap-3">
-                      <div className="flex flex-col items-center">
-                        <div className="size-20 rounded-lg border border-neutral-200 bg-neutral-50 overflow-hidden">
-                          <ProductVisual
-                            visualId={bItem.visualId}
-                            showStudioLighting={false}
-                          />
+                  {bundleItems.map((bItem, bIdx) => {
+                    const bKey = String(bItem._id || bItem.slug || bIdx);
+                    const bPrice = bItem.minPrice || bItem.maxPrice || 0;
+                    return (
+                      <div key={bKey} className="flex items-center gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className="size-20 rounded-lg border border-neutral-200 bg-neutral-50 overflow-hidden">
+                            <ProductVisual
+                              visualId={bItem.visualId || bItem.slug || ""}
+                              showStudioLighting={false}
+                            />
+                          </div>
+                          <span className="mt-1 text-xs font-bold text-neutral-900">
+                            {formatPrice(bPrice)}
+                          </span>
+                          <span className="text-[11px] text-neutral-500 truncate max-w-24">
+                            {bItem.name}
+                          </span>
                         </div>
-                        <span className="mt-1 text-xs font-bold text-neutral-900">
-                          {formatPrice(bItem.price)}
-                        </span>
-                        <span className="text-[11px] text-neutral-500 truncate max-w-24">
-                          {bItem.name}
-                        </span>
+                        {bIdx < bundleItems.length - 1 && (
+                          <span className="text-lg font-bold text-neutral-400">
+                            +
+                          </span>
+                        )}
                       </div>
-                      {bIdx < bundleItems.length - 1 && (
-                        <span className="text-lg font-bold text-neutral-400">
-                          +
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Bundle Purchase Callout */}
@@ -658,51 +720,57 @@ export function ProductDetail({ product, variants }: ProductDetailProps) {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 p-6 rounded-xl border border-neutral-200 bg-white shadow-xs mb-8">
               <div className="md:col-span-4 flex flex-col items-center justify-center text-center border-b md:border-b-0 md:border-r border-neutral-100 pb-6 md:pb-0 md:pr-6">
                 <span className="font-sans text-5xl font-black text-neutral-950">
-                  {(catalogItem.rating || 4.8).toFixed(1)}
+                  {avgRating.toFixed(1)}
                 </span>
                 <div className="flex items-center text-amber-500 my-2">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className="size-4 fill-amber-400 text-amber-400"
+                      className={cn(
+                        "size-4",
+                        i < Math.round(avgRating)
+                          ? "fill-amber-400 text-amber-400"
+                          : "fill-neutral-200 text-neutral-200",
+                      )}
                     />
                   ))}
                 </div>
                 <span className="text-xs text-neutral-500">
-                  Based on {userReviews.length} verified purchases
+                  Based on {totalReviewsCount} verified reviews
                 </span>
               </div>
 
               <div className="md:col-span-8 flex flex-col justify-center gap-2">
-                {[
-                  { stars: 5, pct: 82 },
-                  { stars: 4, pct: 14 },
-                  { stars: 3, pct: 2 },
-                  { stars: 2, pct: 1 },
-                  { stars: 1, pct: 1 },
-                ].map((row) => (
-                  <div
-                    key={row.stars}
-                    className="flex items-center gap-3 text-xs text-neutral-600"
-                  >
-                    <span className="w-12 text-right font-medium">
-                      {row.stars} stars
-                    </span>
-                    <div className="h-2 flex-1 rounded-full bg-neutral-100 overflow-hidden">
-                      <div
-                        className="h-full bg-amber-400 rounded-full"
-                        style={{ width: `${row.pct}%` }}
-                      />
+                {[5, 4, 3, 2, 1].map((stars) => {
+                  const count = ratingCounts[stars] || 0;
+                  const pct =
+                    totalReviewsCount > 0
+                      ? Math.round((count / totalReviewsCount) * 100)
+                      : 0;
+                  return (
+                    <div
+                      key={stars}
+                      className="flex items-center gap-3 text-xs text-neutral-600"
+                    >
+                      <span className="w-12 text-right font-medium">
+                        {stars} stars
+                      </span>
+                      <div className="h-2 flex-1 rounded-full bg-neutral-100 overflow-hidden">
+                        <div
+                          className="h-full bg-amber-400 rounded-full transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-neutral-400">{pct}%</span>
                     </div>
-                    <span className="w-8 text-neutral-400">{row.pct}%</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             {/* Review Cards List */}
             <div className="space-y-4">
-              {userReviews.map((rev) => (
+              {reviewsList.map((rev) => (
                 <div
                   key={rev.id}
                   className="rounded-lg border border-neutral-200 bg-white p-5 shadow-2xs"

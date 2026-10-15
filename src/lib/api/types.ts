@@ -77,6 +77,7 @@ export type CartLine = {
   productId: string;
   productImage: string | null;
   name: string;
+  variantName?: string;
   price: number;
   quantity: number;
   subtotal: number;
@@ -84,7 +85,10 @@ export type CartLine = {
 
 export type Cart = {
   items: CartLine[];
+  savedForLater?: CartLine[];
   priceBreakup: PriceBreakup;
+  couponCode?: string | null;
+  appliedCoupon?: { code: string; description: string } | null;
 };
 
 /** A raw cart document, as listed by the admin endpoints. */
@@ -98,12 +102,36 @@ export type CartRecord = {
 
 export type OrderStatus = "pending" | "confirmed" | "failed" | "cancelled";
 export type PaymentStatus = "pending" | "completed" | "failed";
+export type TrackingStatus =
+  | "Ordered"
+  | "Packed"
+  | "Shipped"
+  | "Out for Delivery"
+  | "Delivered";
+
+export type TrackingTimelineEvent = {
+  status: TrackingStatus;
+  label: string;
+  desc: string;
+  timestamp: string;
+};
+
+export type DeliveryAddress = {
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pin: string;
+  addressType: string;
+};
 
 export type OrderItem = {
   variantId: string;
   productId: string;
   productImage?: string | null;
   name: string;
+  variantName?: string;
   price: number;
   quantity: number;
   subtotal: number;
@@ -111,11 +139,18 @@ export type OrderItem = {
 
 export type Order = {
   _id: string;
+  orderNumber?: string;
   userId: string;
   items: OrderItem[];
   priceBreakup: PriceBreakup;
+  deliveryAddress?: DeliveryAddress;
+  deliveryOption?: "standard" | "express" | "temporal";
+  paymentMethod?: "card" | "upi" | "cod" | "temporal_credit";
   status: OrderStatus;
   paymentStatus: PaymentStatus;
+  trackingStatus?: TrackingStatus;
+  trackingTimeline?: TrackingTimelineEvent[];
+  estimatedDelivery?: string;
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
@@ -123,12 +158,43 @@ export type Order = {
 
 export type Role = "user" | "admin";
 
+export type UserAddress = DeliveryAddress & {
+  _id?: string;
+  isDefault?: boolean;
+};
+
 export type User = {
   id: string;
   name: string;
   email: string;
   role: Role;
+  doubtPoints?: number;
+  addresses?: UserAddress[];
+  wishlist?: (string | Product)[];
   createdAt?: string;
+};
+
+export type Review = {
+  _id: string;
+  productId: string | { _id: string; name: string; slug?: string; visualId?: string };
+  userId?: string;
+  authorName: string;
+  rating: number;
+  title: string;
+  comment: string;
+  isVerifiedPurchase: boolean;
+  helpfulCount: number;
+  createdAt: string;
+};
+
+export type ReviewsResponse = {
+  reviews: Review[];
+  summary: {
+    averageRating: number;
+    totalReviews: number;
+    ratingCounts: Record<number, number>;
+  };
+  pagination: Pagination;
 };
 
 /** Users listed by the admin endpoints come straight from mongoose (`_id`). */
@@ -147,7 +213,9 @@ export type Banner = {
 export type Category = {
   _id: string;
   name: string;
-  imageUrl: string;
+  description?: string;
+  icon?: string;
+  imageUrl?: string;
   path: string;
 };
 

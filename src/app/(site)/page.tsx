@@ -7,22 +7,54 @@ import { MysteryDrop } from "@/components/site/home/mystery-drop";
 import { Newsletter } from "@/components/site/home/newsletter";
 import { RecentlyViewed } from "@/components/site/home/recently-viewed";
 import { WhyExists } from "@/components/site/home/why-exists";
-import {
-  getCustomerFavorites,
-  getTrendingProducts,
-  toStoreProduct,
-} from "@/lib/data/products";
+import { getAllProducts, getBanners, getCategories, getSections } from "@/lib/api/catalog";
+import type { Product } from "@/lib/api/types";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
-export default function HomePage() {
-  const trendingProducts = getTrendingProducts();
-  const customerFavorites = getCustomerFavorites();
+export default async function HomePage() {
+  const [sections, categories, banners, allProducts] = await Promise.all([
+    getSections().catch(() => []),
+    getCategories().catch(() => []),
+    getBanners().catch(() => []),
+    getAllProducts().catch(() => []),
+  ]);
+
+  const trendingSection = sections.find((s) => s.title === "Trending Now");
+  const limitedSection = sections.find(
+    (s) => s.title === "The Unnecessarily Limited",
+  );
+  const favoritesSection = sections.find(
+    (s) => s.title === "Customer Favorites",
+  );
+
+  const trendingProducts: Product[] =
+    trendingSection?.items
+      ?.map((i) => i.productId)
+      ?.filter((p): p is Product => Boolean(p && p._id)) ||
+    allProducts.slice(0, 8);
+
+  const limitedProducts: Product[] =
+    limitedSection?.items
+      ?.map((i) => i.productId)
+      ?.filter((p): p is Product => Boolean(p && p._id)) ||
+    allProducts.filter((p) => p.isLimited || p.totalStock < 100).slice(0, 4);
+
+  const customerFavorites: Product[] =
+    favoritesSection?.items
+      ?.map((i) => i.productId)
+      ?.filter((p): p is Product => Boolean(p && p._id)) ||
+    [...allProducts]
+      .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+      .slice(0, 8);
 
   return (
     <div className="flex flex-col bg-white">
       {/* 1. Hero / Discovery Section */}
-      <HeroDiscovery />
+      <HeroDiscovery
+        banner={banners[0]}
+        featuredProducts={trendingProducts.slice(0, 4)}
+      />
 
       {/* 2. Trending Now (Section 7: Heading: "Trending Now", Subtext: "Apparently, people are buying these.") */}
       <section className="border-b border-neutral-200/80 bg-white py-12 md:py-16">
@@ -46,18 +78,18 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {trendingProducts.map((p) => (
-              <ProductCard key={p.id} product={toStoreProduct(p)} />
+            {trendingProducts.slice(0, 8).map((p) => (
+              <ProductCard key={p._id || p.slug} product={p} />
             ))}
           </div>
         </div>
       </section>
 
       {/* 3. Shop by Category / Category Exploration */}
-      <CategoryGrid />
+      <CategoryGrid categories={categories} />
 
       {/* 4. The Unnecessarily Limited Section */}
-      <LimitedSection />
+      <LimitedSection items={limitedProducts} />
 
       {/* 5. Mystery Drop Section */}
       <MysteryDrop />
@@ -87,8 +119,8 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {customerFavorites.map((p) => (
-              <ProductCard key={p.id} product={toStoreProduct(p)} />
+            {customerFavorites.slice(0, 8).map((p) => (
+              <ProductCard key={p._id || p.slug} product={p} />
             ))}
           </div>
         </div>

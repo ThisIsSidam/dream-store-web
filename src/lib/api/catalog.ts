@@ -1,9 +1,3 @@
-import {
-  YC_PRODUCTS,
-  getProductBySlugOrId,
-  searchCatalog,
-  type CatalogProduct,
-} from "@/lib/data/products";
 import "server-only";
 import { backend } from "./server";
 import type {
@@ -17,47 +11,6 @@ import type {
 
 const REVALIDATE = 60;
 const PAGE_SIZE = 100;
-
-export function toStoreProduct(p: CatalogProduct): Product {
-  return {
-    _id: p._id,
-    name: p.name,
-    category: p.category,
-    description: p.description,
-    shortDescription: p.shortDescription,
-    images: p.images,
-    minPrice: p.minPrice,
-    maxPrice: p.maxPrice,
-    totalStock: p.totalStock,
-    slug: p.slug,
-    rating: p.rating,
-    reviewCount: p.reviewCount,
-    badge: p.badge,
-    oddness: p.oddness,
-    visualId: p.visualId,
-    originalPrice: p.originalPrice,
-    isLimited: p.isLimited,
-    scarcityNote: p.scarcityNote,
-    specifications: p.specifications,
-    whatsIncluded: p.whatsIncluded,
-    frequentlyBoughtTogether: p.frequentlyBoughtTogether,
-  };
-}
-
-export function toStoreProductDetail(p: CatalogProduct): ProductDetail {
-  return {
-    product: toStoreProduct(p),
-    variants: p.variants.map((v) => ({
-      _id: v.id,
-      productId: p._id,
-      attributes: { option: v.name },
-      name: v.name,
-      price: v.price,
-      stock: v.stock,
-      sku: v.sku,
-    })),
-  };
-}
 
 const FALLBACK_CATEGORIES: Category[] = [
   { _id: "cat_all", name: "All", imageUrl: "", path: "/products" },
@@ -142,7 +95,8 @@ export async function getBanners(): Promise<Banner[]> {
       tags: ["home"],
     });
     return banners && banners.length > 0 ? banners : FALLBACK_BANNERS;
-  } catch {
+  } catch (err) {
+    console.warn("Backend /home/banners unreachable:", err);
     return FALLBACK_BANNERS;
   }
 }
@@ -157,7 +111,8 @@ export async function getCategories(): Promise<Category[]> {
     return categories && categories.length > 0
       ? categories
       : FALLBACK_CATEGORIES;
-  } catch {
+  } catch (err) {
+    console.warn("Backend /home/categories unreachable:", err);
     return FALLBACK_CATEGORIES;
   }
 }
@@ -172,90 +127,80 @@ export async function getSections(): Promise<Section[]> {
     if (sections && sections.length > 0) {
       return sections.map((sec) => ({
         ...sec,
-        items: sec.items
-          .filter((i) => i.productId)
+        items: (sec.items || [])
+          .filter((i) => i.productId && (i.productId as any)._id)
           .sort((a, b) => a.order - b.order),
       }));
     }
-  } catch {
-    // fallback below
+  } catch (err) {
+    console.warn("Backend /home/sections unreachable:", err);
   }
 
-  // Construct default sections from YC_PRODUCTS
-  return [
-    {
-      _id: "sec_trending",
-      title: "Trending Now",
-      order: 1,
-      items: YC_PRODUCTS.slice(0, 8).map((p, idx) => ({
-        productId: toStoreProduct(p),
-        order: idx,
-      })),
-    },
-    {
-      _id: "sec_limited",
-      title: "The Unnecessarily Limited",
-      order: 2,
-      items: YC_PRODUCTS.filter((p) => p.isLimited || p.totalStock < 100).map(
-        (p, idx) => ({
-          productId: toStoreProduct(p),
-          order: idx,
-        }),
-      ),
-    },
-  ];
+  return [];
 }
 
 export async function getSection(id: string): Promise<Section | null> {
-  const sections = await getSections();
-  return sections.find((s) => s._id === id) ?? null;
+  try {
+    const section = await backend<Section>(`/home/sections/${encodeURIComponent(id)}`, {
+      auth: "none",
+      revalidate: REVALIDATE,
+      tags: ["home", `section:${id}`],
+    });
+    if (section && section._id) {
+      return {
+        ...section,
+        items: (section.items || [])
+          .filter((i) => i.productId && (i.productId as any)._id)
+          .sort((a, b) => a.order - b.order),
+      };
+    }
+  } catch {
+    const sections = await getSections();
+    return sections.find((s) => s._id === id) ?? null;
+  }
+  return null;
 }
 
 export async function getProduct(
   idOrSlug: string,
 ): Promise<ProductDetail | null> {
-  // First check local catalog by slug, id, or _id
-  const localMatch = getProductBySlugOrId(idOrSlug);
-  if (localMatch) {
-    return toStoreProductDetail(localMatch);
-  }
-
-  // Fallback to backend
   try {
     const detail = await backend<ProductDetail | null>(
-      `/products/${idOrSlug}`,
+      `/products/${encodeURIComponent(idOrSlug)}`,
       {
         auth: "none",
         revalidate: REVALIDATE,
         tags: ["products", `product:${idOrSlug}`],
       },
     );
-    return detail ?? null;
-  } catch {
-    return null;
+    if (detail && detail.product) {
+      return detail;
+    }
+  } catch (err) {
+    console.warn(`Backend /products/${idOrSlug} unreachable or not found:`, err);
   }
+
+  return null;
 }
 
 export async function getProductsByCategory(
   category: string,
 ): Promise<Product[]> {
-  const normalized = category.toLowerCase().trim();
-  const matched = YC_PRODUCTS.filter(
-    (p) => p.category.toLowerCase() === normalized,
-  );
-  if (matched.length > 0) {
-    return matched.map(toStoreProduct);
+  try {
+    const data = await backend<Paginated<"products", Product>>("/products", {
+      auth: "none",
+      revalidate: REVALIDATE,
+      tags: ["products"],
+      query: { category: category.toLowerCase().trim(), limit: 100 },
+    });
+    if (data.products && data.products.length > 0) {
+      return data.products;
+    }
+  } catch (err) {
+    console.warn(`Backend /products?category=${category} unreachable:`, err);
   }
 
-  try {
-    const { products } = await backend<{ products: Product[] }>(
-      `/products/category/${encodeURIComponent(category)}`,
-      { auth: "none", revalidate: REVALIDATE, tags: ["products"] },
-    );
-    return products;
-  } catch {
-    return matched.map(toStoreProduct);
-  }
+  return [];
 }
 
 export async function getAllProducts(): Promise<Product[]> {
@@ -268,11 +213,11 @@ export async function getAllProducts(): Promise<Product[]> {
     if (data.products && data.products.length > 0) {
       return data.products;
     }
-  } catch {
-    // fallback
+  } catch (err) {
+    console.warn("Backend /products unreachable:", err);
   }
 
-  return YC_PRODUCTS.map(toStoreProduct);
+  return [];
 }
 
 export async function searchProducts(
@@ -280,11 +225,6 @@ export async function searchProducts(
   page = 1,
   limit = 100,
 ): Promise<Product[]> {
-  const local = searchCatalog(query);
-  if (local.length > 0) {
-    return local.map(toStoreProduct);
-  }
-
   try {
     const data = await backend<Paginated<"products", Product>>(
       "/products/search",
@@ -295,8 +235,12 @@ export async function searchProducts(
         query: { query, page, limit },
       },
     );
-    return data.products;
-  } catch {
-    return local.map(toStoreProduct);
+    if (data.products && data.products.length > 0) {
+      return data.products;
+    }
+  } catch (err) {
+    console.warn(`Backend /products/search?query=${query} unreachable:`, err);
   }
+
+  return [];
 }

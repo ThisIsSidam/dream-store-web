@@ -47,7 +47,34 @@ const productFields = z.object({
   name: z.string().trim().min(1, "Name is required"),
   category: z.string().trim().min(1, "Category is required"),
   description: z.string().trim().default(""),
+  shortDescription: z.string().trim().optional(),
+  slug: z.string().trim().optional(),
+  visualId: z.string().trim().optional(),
+  oddness: z
+    .enum([
+      "Completely Normal",
+      "Slightly Strange",
+      "Very Strange",
+      "We Should Probably Investigate",
+    ])
+    .optional(),
+  badge: z
+    .enum([
+      "Bestseller",
+      "New",
+      "Limited",
+      "Almost Gone",
+      "Questionable",
+      "Staff Pick",
+      "Verified Somehow",
+      "Somehow Popular",
+    ])
+    .optional(),
+  isLimited: z.coerce.boolean().optional(),
+  scarcityNote: z.string().trim().optional(),
 });
+
+export type ProductFieldsInput = z.input<typeof productFields>;
 
 const createProductSchema = productFields.extend({
   price: optionalNumber("Price").pipe(z.number().min(0).optional()),
@@ -73,7 +100,7 @@ export async function createProduct(_prev: CreateProductState, formData: FormDat
   redirect(`/admin/products/${created._id}`);
 }
 
-export async function updateProduct(id: string, input: { name: string; category: string; description: string }) {
+export async function updateProduct(id: string, input: ProductFieldsInput) {
   const parsed = productFields.safeParse(input);
   if (!parsed.success) {
     await requireAdmin();
@@ -112,6 +139,7 @@ export async function deleteProductImage(productId: string, imageId: string) {
 // ---------------------------------------------------------------------------
 
 const variantSchema = z.object({
+  name: z.string().trim().optional(),
   price: number("Price").pipe(z.number().positive("Price must be greater than 0")),
   stock: number("Stock").pipe(z.number().int("Stock must be a whole number").min(0)),
   sku: z.string().trim().optional(),
@@ -253,4 +281,42 @@ export async function removeSubscriber(id: string) {
   const result = await run(() => backend(`/newsletter/${id}`, { method: "DELETE" }));
   if (!result.ok) throw new Error(result.error);
   revalidatePath("/admin/newsletter");
+}
+
+// ---------------------------------------------------------------------------
+// Order Tracking Fulfillment Simulation
+// ---------------------------------------------------------------------------
+
+export async function advanceOrderTracking(
+  orderId: string,
+  status: "Ordered" | "Packed" | "Shipped" | "Out for Delivery" | "Delivered",
+  note?: string,
+) {
+  const result = await run(() =>
+    backend(`/orders/${orderId}/tracking`, {
+      method: "PATCH",
+      body: { status, note },
+    }),
+  );
+  if (result.ok) {
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders");
+    revalidatePath(`/orders/${orderId}`);
+  }
+  return result;
+}
+
+// ---------------------------------
+// Review Moderation
+// ---------------------------------
+
+export async function deleteReviewAction(reviewId: string) {
+  const result = await run(() =>
+    backend(`/reviews/${reviewId}`, { method: "DELETE" }),
+  );
+  if (result.ok) {
+    updateTag("products");
+    revalidatePath("/admin/reviews");
+  }
+  return result;
 }

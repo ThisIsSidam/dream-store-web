@@ -47,10 +47,9 @@ export function MysteryDrop() {
   }
 
   function handleAddRevealedToCart() {
-    // Add mock revealed product
+    // Add revealed product
     addToCart({
-      id: "anomaly-drop-88",
-      _id: "yc_drop_088",
+      _id: "anti-gravity-vessel",
       name: "Anti-Gravity Ceramic Vessel",
       slug: "anti-gravity-vessel",
       category: "Science",
@@ -58,7 +57,6 @@ export function MysteryDrop() {
         "Ceramic vessel that hovers precisely 4mm above tabletops when filled with hot liquid.",
       description:
         "Anomaly Drop #88. Engineered using localized diamagnetic levitation.",
-      price: 449,
       minPrice: 449,
       maxPrice: 449,
       totalStock: 14,
@@ -66,7 +64,6 @@ export function MysteryDrop() {
       reviewCount: 1,
       badge: "Limited",
       oddness: "We Should Probably Investigate",
-      sku: "YC-ANOM-088",
       visualId: "bottled-echoes",
       specifications: {
         "Levitation Height": "4.2mm",
@@ -74,16 +71,6 @@ export function MysteryDrop() {
       },
       whatsIncluded: ["1 × Vessel", "1 × Thermal base"],
       frequentlyBoughtTogether: [],
-      variants: [
-        {
-          id: "var_drop_88",
-          name: "Glazed Obsidian",
-          price: 449,
-          stock: 14,
-          sku: "YC-ANOM-088",
-        },
-      ],
-      reviews: [],
       images: [],
     });
   }

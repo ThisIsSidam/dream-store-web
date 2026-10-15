@@ -1,11 +1,16 @@
 "use client";
 
 import { ProductCard } from "@/components/product/product-card";
-import { getLimitedProducts, toStoreProduct } from "@/lib/data/products";
+import type { Product } from "@/lib/api/types";
 import { AlertCircle, Flame, ShieldAlert } from "lucide-react";
 
-export function LimitedSection() {
-  const limitedItems = getLimitedProducts();
+interface LimitedSectionProps {
+  items?: Product[];
+}
+
+export function LimitedSection({ items = [] }: LimitedSectionProps) {
+  if (!items || items.length === 0) return null;
+  const limitedItems = items;
 
   return (
     <section className="border-b border-neutral-200 bg-neutral-100/70 py-12 md:py-16">
@@ -35,8 +40,8 @@ export function LimitedSection() {
         {/* 4-Column Product Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {limitedItems.slice(0, 4).map((item) => (
-            <div key={item.id} className="flex flex-col">
-              <ProductCard product={toStoreProduct(item)} />
+            <div key={item._id || item.slug} className="flex flex-col">
+              <ProductCard product={item} />
               {/* Scarcity Note Banner below card */}
               <div className="mt-2 flex items-center gap-1.5 px-1 text-[11px] font-semibold text-amber-800">
                 <AlertCircle className="size-3 text-amber-600 shrink-0" />

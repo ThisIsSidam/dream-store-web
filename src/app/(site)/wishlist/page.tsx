@@ -3,16 +3,54 @@
 import { ProductCard } from "@/components/product/product-card";
 import { PageShell } from "@/components/site/page-shell";
 import { useStore } from "@/lib/client/store";
-import { YC_PRODUCTS, toStoreProduct } from "@/lib/data/products";
+import type { Product } from "@/lib/api/types";
+import { swrFetcher } from "@/lib/client/api";
 import { ArrowRight, Heart, Trash2 } from "lucide-react";
 import Link from "next/link";
+import useSWR from "swr";
 
 export default function WishlistPage() {
-  const { wishlist, removeFromWishlist, addToCart } = useStore();
+  const { wishlist, wishlistProducts, removeFromWishlist } = useStore();
 
-  const wishlistedItems = wishlist
-    .map((id) => YC_PRODUCTS.find((p) => p.id === id || p._id === id))
-    .filter((p): p is (typeof YC_PRODUCTS)[0] => Boolean(p));
+  const { data: backendWishlist } = useSWR<{ wishlist: any[] }>(
+    "users/wishlist",
+    swrFetcher,
+    { shouldRetryOnError: false },
+  );
+
+  const liveItems =
+    backendWishlist?.wishlist ||
+    (wishlistProducts.length > 0 ? wishlistProducts : []);
+
+  const wishlistedItems: Product[] = wishlist
+    .map((id) => {
+      const fromLive = liveItems.find(
+        (p) => typeof p === "object" && (p._id === id || p.slug === id),
+      );
+      if (fromLive) {
+        return {
+          _id: fromLive._id,
+          name: fromLive.name,
+          category: fromLive.category,
+          description: fromLive.description || "",
+          shortDescription: fromLive.shortDescription,
+          images: fromLive.images || [],
+          minPrice: fromLive.minPrice || fromLive.price || 99,
+          maxPrice: fromLive.maxPrice || fromLive.price || 99,
+          totalStock: fromLive.totalStock || 10,
+          slug: fromLive.slug,
+          visualId: fromLive.visualId || fromLive.slug,
+          badge: fromLive.badge,
+          oddness: fromLive.oddness,
+          rating: fromLive.rating || 5,
+          reviewCount: fromLive.reviewCount || 0,
+          isLimited: fromLive.isLimited,
+          scarcityNote: fromLive.scarcityNote,
+        } as Product;
+      }
+      return null;
+    })
+    .filter((p): p is Product => Boolean(p));
 
   return (
     <PageShell>
@@ -54,11 +92,11 @@ export default function WishlistPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
             {wishlistedItems.map((p) => (
-              <div key={p.id} className="relative flex flex-col">
-                <ProductCard product={toStoreProduct(p)} />
+              <div key={p._id} className="relative flex flex-col">
+                <ProductCard product={p} />
                 <button
                   type="button"
-                  onClick={() => removeFromWishlist(p.id)}
+                  onClick={() => removeFromWishlist(p._id || p.slug || "")}
                   className="mt-2 flex items-center justify-center gap-1.5 py-1.5 text-xs text-neutral-500 hover:text-rose-600 transition-colors"
                 >
                   <Trash2 className="size-3" />

@@ -1,7 +1,18 @@
-import { CATEGORIES_LIST } from "@/lib/data/products";
+import { getCategories } from "@/lib/api/catalog";
 import Link from "next/link";
 
-export function CategoryNav() {
+export async function CategoryNav() {
+  const categories = await getCategories().catch(() => []);
+
+  const items = [
+    { id: "all", name: "All", path: "/products" },
+    ...categories.map((c) => ({
+      id: c._id || c.name,
+      name: c.name,
+      path: c.path || `/products?category=${encodeURIComponent(c.name)}`,
+    })),
+  ];
+
   return (
     <nav
       aria-label="Categories"
@@ -9,11 +20,11 @@ export function CategoryNav() {
     >
       <div className="mx-auto max-w-[1360px] px-4">
         <ul className="scrollbar-none flex items-center gap-1 sm:gap-2 overflow-x-auto py-1.5 text-xs sm:text-sm font-medium text-neutral-600">
-          {CATEGORIES_LIST.map((cat) => (
+          {items.map((cat) => (
             <li key={cat.id} className="shrink-0">
               <Link
                 href={cat.path}
-                className="inline-block rounded-md px-3 py-1.5 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:bg-neutral-100 focus-visible:outline-hidden"
+                className="inline-block rounded-md px-3 py-1.5 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:bg-neutral-100 focus-visible:outline-hidden capitalize"
               >
                 {cat.name}
               </Link>

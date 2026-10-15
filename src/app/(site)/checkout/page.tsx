@@ -4,18 +4,20 @@ import { ProductVisual } from "@/components/ui/product-visual";
 import { useStore, type PlacedOrder } from "@/lib/client/store";
 import { cn, formatPrice } from "@/lib/utils";
 import {
-    ArrowLeft,
-    ArrowRight,
-    Check,
-    CreditCard,
-    Lock,
-    MapPin,
-    Truck
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CreditCard,
+  Lock,
+  MapPin,
+  Truck,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import useSWR from "swr";
+import { swrFetcher } from "@/lib/client/api";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -34,16 +36,58 @@ export default function CheckoutPage() {
 
   const [step, setStep] = useState<Step>(1);
 
+  const { data: user, isLoading: userLoading } = useSWR<{
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+    addresses?: Array<{
+      fullName: string;
+      phone: string;
+      address: string;
+      city: string;
+      state: string;
+      pin: string;
+      addressType: string;
+      isDefault?: boolean;
+    }>;
+  }>("users/me", swrFetcher, {
+    shouldRetryOnError: false,
+    revalidateOnFocus: false,
+  });
+
+  const isAuthenticated = !!user;
+
   // Step 1: Address State
   const [address, setAddress] = useState({
-    fullName: "Arthur Dent",
-    phone: "+1 (555) 019-2834",
-    address: "42 Sub-Etha Expressway, Apt 7B",
-    city: "Islington",
-    state: "London",
-    pin: "WC1N 3AX",
+    fullName: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    pin: "",
     addressType: "Home",
   });
+
+  useEffect(() => {
+    if (user) {
+      if (user.addresses && user.addresses.length > 0) {
+        const def = user.addresses.find((a) => a.isDefault) || user.addresses[0];
+        setAddress((prev) => ({
+          ...prev,
+          fullName: def.fullName || user.name || prev.fullName,
+          phone: def.phone || prev.phone,
+          address: def.address || prev.address,
+          city: def.city || prev.city,
+          state: def.state || prev.state,
+          pin: def.pin || prev.pin,
+          addressType: def.addressType || "Home",
+        }));
+      } else if (user.name) {
+        setAddress((prev) => ({ ...prev, fullName: user.name }));
+      }
+    }
+  }, [user]);
 
   // Step 2: Delivery Option
   const [deliveryOption, setDeliveryOption] =
@@ -52,8 +96,8 @@ export default function CheckoutPage() {
   // Step 3: Payment Method
   const [paymentMethod, setPaymentMethod] =
     useState<PlacedOrder["paymentMethod"]>("card");
-  const [upiId, setUpiId] = useState("arthur@okicici");
-  const [cardNumber, setCardNumber] = useState("•••• •••• •••• 4242");
+  const [upiId, setUpiId] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
 
   const [isPlacing, setIsPlacing] = useState(false);
 
@@ -102,10 +146,15 @@ export default function CheckoutPage() {
     setStep(4);
   }
 
-  function handlePlaceOrder() {
+  async function handlePlaceOrder() {
+    if (!isAuthenticated) {
+      toast.error("Please sign in to place your order.");
+      router.push(`/signin?next=${encodeURIComponent("/checkout")}`);
+      return;
+    }
     setIsPlacing(true);
     try {
-      const order = placeOrder({
+      const order = await placeOrder({
         address,
         deliveryOption,
         paymentMethod,
@@ -638,26 +687,60 @@ export default function CheckoutPage() {
                 </ul>
               </div>
 
-              {/* Place Order CTA */}
-              <div className="pt-4 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(3)}
-                  className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 flex items-center gap-1"
-                >
-                  <ArrowLeft className="size-3.5" />
-                  <span>Back to Payment</span>
-                </button>
+              {/* Place Order CTA / Auth Gate */}
+              <div className="pt-4 border-t border-neutral-100 flex flex-col gap-4">
+                {!isAuthenticated && !userLoading ? (
+                  <div className="w-full rounded-xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 text-left">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-amber-100 text-amber-800 shrink-0 mt-0.5">
+                        <Lock className="size-4" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-bold text-amber-950">
+                          Sign In Required to Complete Purchase
+                        </h4>
+                        <p className="text-xs text-amber-800/90 mt-1">
+                          To register your order in the ledger and track shipment, please sign in or create an account. Your items and cart will be preserved.
+                        </p>
+                        <div className="mt-3.5 flex flex-wrap items-center gap-3">
+                          <Link
+                            href={`/signin?next=${encodeURIComponent("/checkout")}`}
+                            className="inline-flex items-center gap-2 rounded-md bg-neutral-900 px-5 py-2.5 text-xs font-bold text-white hover:bg-neutral-800 transition-colors shadow-xs"
+                          >
+                            Sign In to Place Order
+                          </Link>
+                          <Link
+                            href={`/signup?next=${encodeURIComponent("/checkout")}`}
+                            className="inline-flex items-center gap-2 rounded-md border border-neutral-300 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
+                          >
+                            Create Account
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
 
-                <button
-                  type="button"
-                  disabled={isPlacing}
-                  onClick={handlePlaceOrder}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-md bg-neutral-900 px-8 py-3.5 text-sm font-bold text-white transition-all hover:bg-emerald-600 disabled:bg-neutral-300 shadow-md active:scale-98"
-                >
-                  <Lock className="size-4" />
-                  <span>Place Order ({formatPrice(total)})</span>
-                </button>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 flex items-center gap-1"
+                  >
+                    <ArrowLeft className="size-3.5" />
+                    <span>Back to Payment</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isPlacing || (!isAuthenticated && !userLoading) || userLoading}
+                    onClick={handlePlaceOrder}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-md bg-neutral-900 px-8 py-3.5 text-sm font-bold text-white transition-all hover:bg-emerald-600 disabled:bg-neutral-300 shadow-md active:scale-98"
+                  >
+                    <Lock className="size-4" />
+                    <span>{isPlacing ? "Registering Order..." : `Place Order (${formatPrice(total)})`}</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}

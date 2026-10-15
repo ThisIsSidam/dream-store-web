@@ -39,11 +39,11 @@ export function AccountMenu({ user }: { user: User | null }) {
   if (!user) {
     return (
       <Link
-        href="/account"
+        href="/signin"
         className="flex h-9 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
       >
         <UserIcon className="size-4 text-neutral-500" aria-hidden />
-        <span className="hidden sm:inline">Account</span>
+        <span className="hidden sm:inline">Sign In</span>
       </Link>
     );
   }

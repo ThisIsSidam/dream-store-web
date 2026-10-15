@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import useSWR from "swr";
+import { swrFetcher } from "@/lib/client/api";
+import type { PlacedOrder } from "@/lib/client/store";
 
 const TRACKING_STEPS = [
   {
@@ -62,10 +65,65 @@ const STATUS_INDEX: Record<string, number> = {
 export function OrderTrackingView({ orderId }: { orderId: string }) {
   const { getOrder, orders } = useStore();
 
-  const order =
+  const localOrder =
     getOrder(orderId) ||
-    orders.find((o) => o.id === orderId || o.orderNumber === orderId) ||
-    orders[0];
+    orders.find((o) => o.id === orderId || o.orderNumber === orderId);
+
+  const { data: liveData } = useSWR<{ order: any }>(
+    orderId ? `orders/${orderId}` : null,
+    swrFetcher,
+    { refreshInterval: 4000, shouldRetryOnError: false },
+  );
+
+  const liveOrder = liveData?.order;
+
+  const order: PlacedOrder | undefined = liveOrder
+    ? {
+        id: liveOrder._id,
+        orderNumber: liveOrder.orderNumber || (localOrder?.orderNumber ?? "DRM-0000"),
+        date: new Date(liveOrder.createdAt || Date.now()).toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        }),
+        items:
+          liveOrder.items && liveOrder.items.length > 0
+            ? liveOrder.items.map((item: any) => ({
+                variantId: String(item.variantId),
+                productId: String(item.productId || ""),
+                name: item.name || "Imaginary Object",
+                variantName: item.variantName || "Standard",
+                price: item.price || 0,
+                quantity: item.quantity || 1,
+                visualId: item.visualId || "generic",
+                category: item.category || "Weird Stuff",
+                stock: 10,
+              }))
+            : localOrder?.items || [],
+        subtotal: liveOrder.priceBreakup?.subtotal ?? (localOrder?.subtotal ?? 0),
+        discount: liveOrder.priceBreakup?.discount ?? (localOrder?.discount ?? 0),
+        shipping: liveOrder.priceBreakup?.shipping ?? (localOrder?.shipping ?? 0),
+        tax: liveOrder.priceBreakup?.tax ?? (localOrder?.tax ?? 0),
+        total: liveOrder.priceBreakup?.total ?? (localOrder?.total ?? 0),
+        deliveryOption: liveOrder.deliveryOption || (localOrder?.deliveryOption ?? "standard"),
+        deliveryAddress: liveOrder.deliveryAddress || (localOrder?.deliveryAddress ?? {
+          fullName: "Customer",
+          phone: "",
+          address: "123 Reality Lane",
+          city: "Nowhere",
+          state: "Void",
+          pin: "00000",
+          addressType: "Home",
+        }),
+        paymentMethod: liveOrder.paymentMethod || (localOrder?.paymentMethod ?? "card"),
+        status: (liveOrder.trackingStatus || liveOrder.status || localOrder?.status || "Ordered") as PlacedOrder["status"],
+        statusDescription:
+          liveOrder.trackingTimeline?.[liveOrder.trackingTimeline.length - 1]?.desc ||
+          localOrder?.statusDescription ||
+          "Transaction recorded in the great ledger.",
+        estimatedDelivery: liveOrder.estimatedDelivery || (localOrder?.estimatedDelivery ?? "In 3-5 business days"),
+      }
+    : (localOrder || orders[0]);
 
   if (!order) {
     return (
@@ -84,7 +142,7 @@ export function OrderTrackingView({ orderId }: { orderId: string }) {
     );
   }
 
-  const currentStepIdx = STATUS_INDEX[order.status] ?? 3;
+  const currentStepIdx = STATUS_INDEX[order.status] ?? 0;
 
   function handleDownloadReceipt() {
     toast.success("Receipt Generated", {
@@ -197,15 +255,53 @@ export function OrderTrackingView({ orderId }: { orderId: string }) {
                       >
                         {st.label}
                       </p>
-                      <p className="text-[11px] text-neutral-500 italic mt-0.5 max-w-36 leading-tight">
-                        &ldquo;{st.desc}&rdquo;
-                      </p>
+                      {(() => {
+                        const matching = liveOrder?.trackingTimeline?.find(
+                          (e: any) => e.status === st.status,
+                        );
+                        return (
+                          <p className="text-[11px] text-neutral-500 italic mt-0.5 max-w-36 leading-tight">
+                            &ldquo;{matching?.desc || st.desc}&rdquo;
+                          </p>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
               })}
             </div>
           </div>
+
+          {/* Live Dispatch Feed */}
+          {liveOrder?.trackingTimeline && liveOrder.trackingTimeline.length > 0 && (
+            <div className="mt-8 border-t border-neutral-200/60 pt-4">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 mb-2.5 flex items-center gap-1.5">
+                <Clock className="size-3.5 text-indigo-600" />
+                <span>Real-Time Dispatch Feed</span>
+              </h4>
+              <div className="space-y-2">
+                {liveOrder.trackingTimeline.map((ev: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2.5 text-xs bg-white p-2.5 rounded-md border border-neutral-200/50"
+                  >
+                    <span className="font-mono text-[10px] text-neutral-400 shrink-0 mt-0.5">
+                      {new Date(ev.timestamp).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                    <div>
+                      <span className="font-semibold text-neutral-900 mr-2">
+                        [{ev.status}]
+                      </span>
+                      <span className="text-neutral-600">{ev.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Items List */}

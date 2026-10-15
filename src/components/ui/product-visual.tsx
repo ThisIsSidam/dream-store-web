@@ -1428,6 +1428,211 @@ function renderVisual(id: string) {
         </svg>
       );
 
+    case "backup-gravity":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          <rect x="75" y="45" width="50" height="110" rx="25" fill="#f1f5f9" stroke="#334155" strokeWidth="2" />
+          <line x1="100" y1="65" x2="100" y2="135" stroke="#0ea5e9" strokeWidth="2" strokeDasharray="4 3" />
+          <circle cx="100" cy="115" r="14" fill="#0284c7" fillOpacity="0.2" stroke="#0284c7" strokeWidth="2" />
+          <path d="M93 115 L100 123 L107 115" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M93 85 L100 93 L107 85" stroke="#64748b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="100" cy="52" r="3" fill="#334155" />
+          <line x1="68" y1="155" x2="132" y2="155" stroke="#1e293b" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+      );
+
+    case "fresh-wifi":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Warm bakery Wi-Fi waves */}
+          <path d="M50 75 Q100 35 150 75" stroke="#f59e0b" strokeWidth="3.5" strokeLinecap="round" opacity="0.4" />
+          <path d="M65 95 Q100 65 135 95" stroke="#f59e0b" strokeWidth="3.5" strokeLinecap="round" opacity="0.7" />
+          <path d="M80 115 Q100 95 120 115" stroke="#d97706" strokeWidth="3.5" strokeLinecap="round" />
+          <circle cx="100" cy="132" r="6" fill="#b45309" />
+          {/* Fresh steam curves */}
+          <path d="M94 50 Q91 40 96 32" stroke="#fde68a" strokeWidth="2" strokeLinecap="round" />
+          <path d="M106 48 Q103 38 108 30" stroke="#fde68a" strokeWidth="2" strokeLinecap="round" />
+          {/* Bread loaf pedestal */}
+          <ellipse cx="100" cy="158" rx="42" ry="12" fill="#d97706" fillOpacity="0.15" stroke="#92400e" strokeWidth="1.5" />
+        </svg>
+      );
+
+    case "used-memories":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Vintage Polaroid frame */}
+          <rect x="52" y="38" width="96" height="122" rx="4" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+          <rect x="62" y="48" width="76" height="76" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+          {/* Memory silhouette / nostalgic shimmer */}
+          <circle cx="100" cy="80" r="24" fill="#fef08a" fillOpacity="0.3" stroke="#eab308" strokeWidth="1.5" strokeDasharray="3 3" />
+          <path d="M72 114 C82 96 94 92 104 104 C112 112 122 100 130 114 Z" fill="#94a3b8" fillOpacity="0.3" />
+          <circle cx="86" cy="70" r="3" fill="#f59e0b" />
+          {/* Hand-written memory note line */}
+          <line x1="68" y1="140" x2="114" y2="140" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
+          <line x1="68" y1="148" x2="92" y2="148" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
+
+    case "downloadable-water":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Droplet outline */}
+          <path d="M100 45 C100 45 68 95 68 122 C68 139.6 82.4 154 100 154 C117.6 154 132 139.6 132 122 C132 95 100 45 100 45 Z" fill="#0284c7" fillOpacity="0.12" stroke="#0284c7" strokeWidth="2" />
+          {/* Digital download bit grid inside droplet */}
+          <line x1="86" y1="110" x2="114" y2="110" stroke="#0ea5e9" strokeWidth="1.5" strokeDasharray="2 2" />
+          <line x1="82" y1="122" x2="118" y2="122" stroke="#0ea5e9" strokeWidth="1.5" strokeDasharray="4 2" />
+          <line x1="88" y1="134" x2="112" y2="134" stroke="#0ea5e9" strokeWidth="1.5" />
+          {/* Download arrow */}
+          <path d="M100 78 L100 98 M93 92 L100 99 L107 92" stroke="#0369a1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+
+    case "organic-pixels":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Pixel subgrid with organic leaves */}
+          <rect x="62" y="62" width="22" height="42" rx="4" fill="#ef4444" fillOpacity="0.25" stroke="#ef4444" strokeWidth="1.5" />
+          <rect x="89" y="62" width="22" height="42" rx="4" fill="#22c55e" fillOpacity="0.25" stroke="#22c55e" strokeWidth="1.5" />
+          <rect x="116" y="62" width="22" height="42" rx="4" fill="#3b82f6" fillOpacity="0.25" stroke="#3b82f6" strokeWidth="1.5" />
+          {/* Sprouting leaf */}
+          <path d="M100 115 C100 135 100 148 100 148" stroke="#15803d" strokeWidth="2" strokeLinecap="round" />
+          <path d="M100 130 C90 125 85 115 90 110 C96 112 98 122 100 130 Z" fill="#22c55e" stroke="#15803d" strokeWidth="1" />
+          <path d="M100 124 C110 120 115 110 110 105 C104 107 102 117 100 124 Z" fill="#4ade80" stroke="#15803d" strokeWidth="1" />
+        </svg>
+      );
+
+    case "emotional-support-rock":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Calm smooth river rock */}
+          <ellipse cx="100" cy="115" rx="55" ry="38" fill="#64748b" stroke="#334155" strokeWidth="2" />
+          {/* Gentle specular highlight */}
+          <ellipse cx="88" cy="100" rx="28" ry="14" fill="#94a3b8" fillOpacity="0.4" />
+          {/* Tiny gentle smile */}
+          <path d="M92 120 Q100 127 108 120" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="88" cy="112" r="2.5" fill="#1e293b" />
+          <circle cx="112" cy="112" r="2.5" fill="#1e293b" />
+          {/* Tiny laurel leaf halo */}
+          <path d="M75 75 Q100 68 125 75" stroke="#eab308" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.7" />
+        </svg>
+      );
+
+    case "artificial-intelligence":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Acorn / organic chip brain */}
+          <rect x="68" y="70" width="64" height="64" rx="14" fill="#065f46" fillOpacity="0.15" stroke="#059669" strokeWidth="2" />
+          <circle cx="100" cy="102" r="16" fill="#10b981" fillOpacity="0.25" stroke="#10b981" strokeWidth="1.5" />
+          {/* Circuit leaf branches */}
+          <path d="M100 70 L100 50 M100 134 L100 154" stroke="#059669" strokeWidth="2" strokeLinecap="round" />
+          <path d="M68 102 L48 102 M132 102 L152 102" stroke="#059669" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="100" cy="46" r="4" fill="#34d399" />
+          <circle cx="100" cy="158" r="4" fill="#34d399" />
+          <circle cx="44" cy="102" r="4" fill="#34d399" />
+          <circle cx="156" cy="102" r="4" fill="#34d399" />
+        </svg>
+      );
+
+    case "coincidences-subscription":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Two dice showing impossible identical rare faces */}
+          <rect x="60" y="72" width="42" height="42" rx="8" fill="#f8fafc" stroke="#475569" strokeWidth="2" transform="rotate(-8 81 93)" />
+          <rect x="98" y="78" width="42" height="42" rx="8" fill="#f8fafc" stroke="#475569" strokeWidth="2" transform="rotate(12 119 99)" />
+          {/* Cosmic coincidence sparkles */}
+          <path d="M100 45 L102 52 L109 54 L102 56 L100 63 L98 56 L91 54 L98 52 Z" fill="#8b5cf6" />
+          <path d="M142 58 L143 63 L148 64 L143 65 L142 70 L141 65 L136 64 L141 63 Z" fill="#a78bfa" />
+          <circle cx="78" cy="90" r="3" fill="#475569" />
+          <circle cx="120" cy="98" r="3" fill="#475569" />
+        </svg>
+      );
+
+    case "first-impressions":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Stylized handshake / charismatic aura */}
+          <path d="M60 115 L85 95 L115 95 L140 115" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" />
+          <path d="M72 105 L95 125 L105 125 L128 105" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="100" cy="100" r="36" stroke="#93c5fd" strokeWidth="1" strokeDasharray="4 4" />
+          <path d="M100 55 L102 62 L109 64 L102 66 L100 73 L98 66 L91 64 L98 62 Z" fill="#3b82f6" />
+        </svg>
+      );
+
+    case "recycled-dreams":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Recycling Mobius loop encircling dream crescent */}
+          <circle cx="100" cy="100" r="44" stroke="#a855f7" strokeWidth="2" strokeDasharray="8 6" opacity="0.6" />
+          <path d="M112 76 C94 82 86 102 96 122 C90 120 84 112 84 100 C84 86 96 74 112 76 Z" fill="#c084fc" stroke="#7e22ce" strokeWidth="1.5" />
+          <circle cx="118" cy="92" r="2.5" fill="#fbbf24" />
+          <circle cx="126" cy="108" r="1.5" fill="#fbbf24" />
+        </svg>
+      );
+
+    case "reset-personality":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Reboot power symbol within rounded badge */}
+          <rect x="62" y="62" width="76" height="76" rx="38" fill="#f1f5f9" stroke="#0f172a" strokeWidth="2" />
+          <path d="M86 86 A 24 24 0 1 0 114 86" stroke="#0f172a" strokeWidth="3" strokeLinecap="round" />
+          <line x1="100" y1="72" x2="100" y2="94" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+      );
+
+    case "foldable-horizon":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Origami folded planes with sun line */}
+          <polygon points="55,125 100,85 145,125" fill="#fed7aa" stroke="#ea580c" strokeWidth="1.5" />
+          <polygon points="55,125 100,145 145,125" fill="#fde68a" stroke="#d97706" strokeWidth="1.5" />
+          <circle cx="100" cy="85" r="12" fill="#f97316" fillOpacity="0.4" stroke="#ea580c" strokeWidth="1.5" />
+          <line x1="45" y1="125" x2="155" y2="125" stroke="#c2410c" strokeWidth="2" strokeDasharray="4 2" />
+        </svg>
+      );
+
+    case "weekend-extension":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Calendar pad with extra day sliding out */}
+          <rect x="60" y="55" width="60" height="70" rx="6" fill="#f8fafc" stroke="#334155" strokeWidth="2" />
+          <rect x="80" y="70" width="60" height="70" rx="6" fill="#f1f5f9" stroke="#64748b" strokeWidth="1.5" strokeDasharray="3 3" />
+          <rect x="60" y="55" width="60" height="18" rx="6" fill="#3b82f6" />
+          <text x="75" y="105" fontSize="18" fontWeight="bold" fill="#1e293b" fontFamily="monospace">+16h</text>
+        </svg>
+      );
+
+    case "caffeinated-water":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Water flask with electric caffeine bolt */}
+          <path d="M85 55 L115 55 L125 140 A 15 15 0 0 1 110 155 L90 155 A 15 15 0 0 1 75 140 Z" fill="#e0f2fe" stroke="#0284c7" strokeWidth="2" />
+          {/* Lightning bolt inside */}
+          <path d="M102 75 L93 100 L104 100 L96 128 L111 96 L100 96 Z" fill="#f59e0b" stroke="#d97706" strokeWidth="1" />
+          <circle cx="88" cy="130" r="3" fill="#38bdf8" fillOpacity="0.6" />
+          <circle cx="112" cy="120" r="2" fill="#38bdf8" fillOpacity="0.6" />
+        </svg>
+      );
+
+    case "pocket-infinity":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Infinity loop with stitching */}
+          <path d="M72 100 C72 88 85 88 95 100 C105 112 118 112 128 100 C138 88 128 78 118 88 C108 98 92 115 72 100 Z" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" />
+          <path d="M128 100 C128 112 115 112 105 100 C95 88 82 88 72 100 C62 112 72 122 82 112 C92 102 108 85 128 100 Z" stroke="#818cf8" strokeWidth="2" strokeDasharray="4 3" />
+        </svg>
+      );
+
+    case "vintage-tomorrow":
+      return (
+        <svg viewBox="0 0 200 200" className="w-full h-full max-h-[170px]" fill="none">
+          {/* Wine bottle with futuristic cork wax seal */}
+          <path d="M93 45 L107 45 L107 70 L120 90 L120 155 L80 155 L80 90 L93 70 Z" fill="#f8fafc" stroke="#334155" strokeWidth="2" />
+          <rect x="91" y="40" width="18" height="12" rx="2" fill="#f59e0b" />
+          <rect x="85" y="105" width="30" height="35" rx="2" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="1" />
+          <text x="89" y="125" fontSize="8" fontWeight="bold" fill="#475569" fontFamily="monospace">TOMORROW</text>
+        </svg>
+      );
+
     default:
       return (
         <div className="flex flex-col items-center justify-center text-neutral-400">

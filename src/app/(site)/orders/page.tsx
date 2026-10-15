@@ -1,13 +1,20 @@
 import { OrdersListView } from "@/components/orders/orders-list-view";
 import { PageShell } from "@/components/site/page-shell";
+import { getSession } from "@/lib/auth/session";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Your Orders",
   description: "Normal e-commerce order tracking for questionable shipments.",
 };
 
-export default function OrdersPage() {
+export default async function OrdersPage() {
+  const user = await getSession().catch(() => null);
+  if (!user) {
+    redirect("/signin?next=/orders");
+  }
+
   return (
     <PageShell>
       <div className="mx-auto max-w-4xl py-6">

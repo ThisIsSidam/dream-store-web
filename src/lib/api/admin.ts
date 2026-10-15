@@ -9,6 +9,7 @@ import type {
   Paginated,
   Product,
   ProductDetail,
+  Review,
   Section,
   Subscriber,
   UserRecord,
@@ -35,6 +36,10 @@ export const listSubscribers = ({ page = 1, query, limit = 20 }: ListArgs) =>
     query: { page, limit, query: query?.trim() },
   });
 export const listCarts = (args: ListArgs) => list<"carts", CartRecord>("/cart", args);
+export const listReviews = ({ page = 1, limit = 20 }: { page?: number; limit?: number } = {}) =>
+  backend<Paginated<"reviews", Review>>("/reviews", {
+    query: { page, limit },
+  });
 
 export async function getProductDetail(id: string) {
   if (!/^[0-9a-f]{24}$/i.test(id)) return null;

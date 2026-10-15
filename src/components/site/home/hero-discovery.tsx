@@ -1,10 +1,20 @@
-"use client";
-
 import { ProductVisual } from "@/components/ui/product-visual";
+import type { Banner, Product } from "@/lib/api/types";
+import { formatPrice } from "@/lib/utils";
 import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-export function HeroDiscovery() {
+interface HeroDiscoveryProps {
+  banner?: Banner;
+  featuredProducts?: Product[];
+}
+
+export function HeroDiscovery({ banner, featuredProducts }: HeroDiscoveryProps) {
+  const title = banner?.title || "Things you didn't know you needed.";
+  const description =
+    banner?.description ||
+    "A marketplace for objects, ideas, and other questionable necessities. Engineered with complete seriousness for the discerning absurdist.";
+  const ctaLink = banner?.link || "/products";
   return (
     <section className="relative overflow-hidden border-b border-neutral-200/80 bg-white py-12 md:py-16">
       {/* Subtle background grid pattern */}
@@ -20,18 +30,16 @@ export function HeroDiscovery() {
             </div>
 
             <h1 className="font-sans text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-neutral-950 leading-[1.12]">
-              Things you didn&apos;t know you needed.
+              {title}
             </h1>
 
             <p className="mt-5 text-base sm:text-xl text-neutral-600 leading-relaxed max-w-2xl">
-              A marketplace for objects, ideas, and other questionable
-              necessities. Engineered with complete seriousness for the
-              discerning absurdist.
+              {description}
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4">
               <Link
-                href="/products"
+                href={ctaLink}
                 className="inline-flex items-center gap-2 rounded-md bg-neutral-900 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-indigo-600 shadow-sm hover:shadow"
               >
                 <span>Start Exploring</span>
@@ -75,117 +83,97 @@ export function HeroDiscovery() {
             </div>
           </div>
 
-          {/* Right Column: Visually interesting composition of several bizarre products floating like a premium campaign */}
+          {/* Right Column: Visually interesting composition of bizarre products */}
           <div className="lg:col-span-5">
             <div className="relative mx-auto w-full max-w-md lg:max-w-none">
               {/* Outer decorative ring */}
               <div className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-indigo-50/50 via-neutral-100/30 to-purple-50/50 blur-xl pointer-events-none" />
 
-              {/* Composition arrangement */}
+              {/* Dynamic composition arrangement */}
               <div className="relative grid grid-cols-2 gap-3.5">
-                {/* Product 1: Bottled Echoes */}
-                <Link
-                  href="/product/bottled-echoes"
-                  className="group relative rounded-xl border border-neutral-200/80 bg-white p-3 shadow-xs transition-all hover:shadow-md hover:border-indigo-300"
-                >
-                  <div className="aspect-square w-full rounded-lg bg-neutral-50 overflow-hidden">
-                    <ProductVisual
-                      visualId="bottled-echoes"
-                      name="Bottled Echoes"
-                    />
-                  </div>
-                  <div className="mt-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wide">
-                        Collectibles
-                      </span>
-                      <span className="text-xs font-bold text-neutral-900">
-                        $399
-                      </span>
-                    </div>
-                    <p className="truncate text-xs font-semibold text-neutral-900 group-hover:text-indigo-600">
-                      Bottled Echoes
-                    </p>
-                  </div>
-                </Link>
+                {(featuredProducts && featuredProducts.length > 0
+                  ? featuredProducts.slice(0, 4)
+                  : [
+                      {
+                        _id: "bottled-echoes",
+                        slug: "bottled-echoes",
+                        name: "Bottled Echoes",
+                        category: "Collectibles",
+                        minPrice: 399,
+                        visualId: "bottled-echoes",
+                        badge: "Collectibles",
+                        isLimited: false,
+                      },
+                      {
+                        _id: "emergency-backup-moon",
+                        slug: "emergency-backup-moon",
+                        name: "Backup Moon",
+                        category: "Science",
+                        minPrice: 12999,
+                        visualId: "emergency-backup-moon",
+                        badge: "Only 3 Left",
+                        isLimited: true,
+                      },
+                      {
+                        _id: "luxury-cardboard",
+                        slug: "luxury-cardboard",
+                        name: "Luxury Cardboard",
+                        category: "Home",
+                        minPrice: 399,
+                        visualId: "luxury-cardboard",
+                        badge: "Artisanal",
+                        isLimited: false,
+                      },
+                      {
+                        _id: "extra-tuesday",
+                        slug: "extra-tuesday",
+                        name: "Extra Tuesday",
+                        category: "Everyday Things",
+                        minPrice: 89,
+                        visualId: "extra-tuesday",
+                        badge: "+24 Hours",
+                        isLimited: false,
+                      },
+                    ]
+                ).map((item) => {
+                  const href = `/product/${item.slug || item._id}`;
+                  const priceStr = formatPrice(
+                    item.minPrice ?? ("maxPrice" in item ? (item.maxPrice as number) : 99) ?? 99,
+                  );
+                  const isItemLimited = "isLimited" in item && Boolean(item.isLimited);
+                  const badgeText =
+                    item.badge ||
+                    (isItemLimited ? "Limited" : item.category) ||
+                    "Surreal";
 
-                {/* Product 2: Emergency Backup Moon */}
-                <Link
-                  href="/product/emergency-backup-moon"
-                  className="group relative rounded-xl border border-neutral-200/80 bg-white p-3 shadow-xs transition-all hover:shadow-md hover:border-indigo-300"
-                >
-                  <div className="aspect-square w-full rounded-lg bg-neutral-50 overflow-hidden">
-                    <ProductVisual
-                      visualId="emergency-backup-moon"
-                      name="Emergency Backup Moon"
-                    />
-                  </div>
-                  <div className="mt-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-semibold text-rose-600 uppercase tracking-wide">
-                        Only 3 Left
-                      </span>
-                      <span className="text-xs font-bold text-neutral-900">
-                        $12,999
-                      </span>
-                    </div>
-                    <p className="truncate text-xs font-semibold text-neutral-900 group-hover:text-indigo-600">
-                      Backup Moon
-                    </p>
-                  </div>
-                </Link>
-
-                {/* Product 3: Luxury Cardboard */}
-                <Link
-                  href="/product/luxury-cardboard"
-                  className="group relative rounded-xl border border-neutral-200/80 bg-white p-3 shadow-xs transition-all hover:shadow-md hover:border-indigo-300"
-                >
-                  <div className="aspect-square w-full rounded-lg bg-neutral-50 overflow-hidden">
-                    <ProductVisual
-                      visualId="luxury-cardboard"
-                      name="Luxury Cardboard"
-                    />
-                  </div>
-                  <div className="mt-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">
-                        Artisanal
-                      </span>
-                      <span className="text-xs font-bold text-neutral-900">
-                        $399
-                      </span>
-                    </div>
-                    <p className="truncate text-xs font-semibold text-neutral-900 group-hover:text-indigo-600">
-                      Luxury Cardboard
-                    </p>
-                  </div>
-                </Link>
-
-                {/* Product 4: Extra Tuesday */}
-                <Link
-                  href="/product/extra-tuesday"
-                  className="group relative rounded-xl border border-neutral-200/80 bg-white p-3 shadow-xs transition-all hover:shadow-md hover:border-indigo-300"
-                >
-                  <div className="aspect-square w-full rounded-lg bg-neutral-50 overflow-hidden">
-                    <ProductVisual
-                      visualId="extra-tuesday"
-                      name="Extra Tuesday"
-                    />
-                  </div>
-                  <div className="mt-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide">
-                        +24 Hours
-                      </span>
-                      <span className="text-xs font-bold text-neutral-900">
-                        $89
-                      </span>
-                    </div>
-                    <p className="truncate text-xs font-semibold text-neutral-900 group-hover:text-indigo-600">
-                      Extra Tuesday
-                    </p>
-                  </div>
-                </Link>
+                  return (
+                    <Link
+                      key={item._id || item.slug}
+                      href={href}
+                      className="group relative rounded-xl border border-neutral-200/80 bg-white p-3 shadow-xs transition-all hover:shadow-md hover:border-indigo-300"
+                    >
+                      <div className="aspect-square w-full rounded-lg bg-neutral-50 overflow-hidden">
+                        <ProductVisual
+                          visualId={item.visualId || item.slug || "generic"}
+                          name={item.name}
+                        />
+                      </div>
+                      <div className="mt-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wide truncate max-w-[90px]">
+                            {badgeText}
+                          </span>
+                          <span className="text-xs font-bold text-neutral-900 shrink-0">
+                            {priceStr}
+                          </span>
+                        </div>
+                        <p className="truncate text-xs font-semibold text-neutral-900 group-hover:text-indigo-600">
+                          {item.name}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
 
               {/* Floating verified badge */}

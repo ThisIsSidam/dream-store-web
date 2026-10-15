@@ -3,7 +3,6 @@
 import { ProductVisual } from "@/components/ui/product-visual";
 import type { Product } from "@/lib/api/types";
 import { useStore } from "@/lib/client/store";
-import { getProductBySlugOrId } from "@/lib/data/products";
 import { cn, formatPrice, formatPriceRange } from "@/lib/utils";
 import { Heart, ShoppingCart, Star } from "lucide-react";
 import Link from "next/link";
@@ -20,22 +19,15 @@ export function ProductCard({
   dense = false,
 }: ProductCardProps) {
   const { addToCart, toggleWishlist, isInWishlist } = useStore();
-  const catalogItem =
-    getProductBySlugOrId(product._id) ||
-    getProductBySlugOrId(product.slug || "");
-  const isWishlisted = isInWishlist(catalogItem?.id || product._id);
+  const isWishlisted = isInWishlist(product._id || product.slug || "");
 
-  const visualId =
-    product.visualId || catalogItem?.visualId || product.slug || "generic";
-  const badge = product.badge || catalogItem?.badge;
-  const rating = product.rating ?? catalogItem?.rating ?? 4.8;
-  const reviewCount = product.reviewCount ?? catalogItem?.reviewCount ?? 84;
-  const shortDesc =
-    product.shortDescription ||
-    catalogItem?.shortDescription ||
-    product.description;
-  const totalStock = product.totalStock ?? catalogItem?.totalStock ?? 100;
-  const originalPrice = product.originalPrice || catalogItem?.originalPrice;
+  const visualId = product.visualId || product.slug || "generic";
+  const badge = product.badge;
+  const rating = product.rating ?? 4.8;
+  const reviewCount = product.reviewCount ?? 12;
+  const shortDesc = product.shortDescription || product.description;
+  const totalStock = product.totalStock ?? 100;
+  const originalPrice = product.originalPrice;
 
   const isLowStock = totalStock <= 10 && totalStock > 0;
   const isSoldOut = totalStock <= 0;
@@ -43,16 +35,16 @@ export function ProductCard({
   function handleQuickAdd(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (catalogItem) {
-      addToCart(catalogItem);
-    }
+    addToCart(product);
   }
 
   function handleWishlistClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    toggleWishlist(catalogItem?.id || product._id);
+    toggleWishlist(product._id || product.slug || "");
   }
+
+  const productHref = `/product/${product.slug || product._id}`;
 
   return (
     <div
@@ -64,7 +56,7 @@ export function ProductCard({
       {/* Top Image Container */}
       <div className="relative aspect-square w-full overflow-hidden bg-neutral-50/70 border-b border-neutral-100">
         <Link
-          href={`/product/${catalogItem?.id || product._id}`}
+          href={productHref}
           className="block size-full"
         >
           <ProductVisual
@@ -128,7 +120,7 @@ export function ProductCard({
 
         {/* Name */}
         <Link
-          href={`/product/${catalogItem?.id || product._id}`}
+          href={productHref}
           className="mt-1 line-clamp-1 font-sans text-sm sm:text-base font-semibold text-neutral-900 group-hover:text-indigo-600 transition-colors"
         >
           {product.name}
@@ -150,9 +142,9 @@ export function ProductCard({
             </span>
           </div>
           <span className="text-neutral-400">({reviewCount})</span>
-          {catalogItem?.oddness && (
+          {product.oddness && (
             <span className="ml-auto hidden xs:inline text-[10px] text-neutral-400 font-mono">
-              {catalogItem.oddness === "Completely Normal"
+              {product.oddness === "Completely Normal"
                 ? "Normal"
                 : "Strange"}
             </span>

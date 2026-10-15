@@ -4,6 +4,7 @@ import { Box } from "lucide-react";
 import { AdminCard, IdTag, Overline, PageHeading } from "@/components/admin/ui";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { RemoteImage } from "@/components/ui/remote-image";
+import { OrderTrackingAdminControls } from "@/components/admin/order-tracking-admin-controls";
 import { getOrderRecord } from "@/lib/api/admin";
 import { formatDateTime, formatMoney, shortId } from "@/lib/utils";
 
@@ -51,6 +52,14 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
           <div>
             <Overline>Status</Overline>
             <StatusBadge status={order.status} />
+          </div>
+          <div>
+            <Overline>Fulfillment &amp; Live Tracking</Overline>
+            <OrderTrackingAdminControls
+              orderId={order._id}
+              currentStatus={order.trackingStatus}
+              timeline={order.trackingTimeline}
+            />
           </div>
           <div>
             <Overline>Payment</Overline>

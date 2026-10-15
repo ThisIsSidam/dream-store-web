@@ -33,6 +33,14 @@ export default async function ProductPage({ params }: PageProps<"/product/[id]">
     .filter((p) => p._id !== product._id)
     .slice(0, 12);
 
+  const bundleIds = product.frequentlyBoughtTogether || [];
+  const bundleDetails = await Promise.all(
+    bundleIds.slice(0, 2).map((bId) => getProduct(bId).catch(() => null)),
+  );
+  const bundleProducts = bundleDetails
+    .filter((d): d is NonNullable<typeof d> => Boolean(d))
+    .map((d) => d.product);
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -76,7 +84,11 @@ export default async function ProductPage({ params }: PageProps<"/product/[id]">
           </ol>
         </nav>
         <div className="bg-white shadow-soft">
-          <ProductDetail product={product} variants={variants} />
+          <ProductDetail
+            product={product}
+            variants={variants}
+            bundleProducts={bundleProducts}
+          />
         </div>
         <ProductShelf
           title="Similar products"

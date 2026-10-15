@@ -1,7 +1,8 @@
 "use client";
 
 import { ProductVisual } from "@/components/ui/product-visual";
-import { searchCatalog, type CatalogProduct } from "@/lib/data/products";
+import type { Product } from "@/lib/api/types";
+import { api } from "@/lib/client/api";
 import { cn, formatPrice } from "@/lib/utils";
 import {
   ArrowRight,
@@ -43,7 +44,7 @@ export function SearchBox({
   const rootRef = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
-  const [results, setResults] = useState<CatalogProduct[]>([]);
+  const [results, setResults] = useState<Product[]>([]);
   const [active, setActive] = useState(-1);
 
   const query = value.trim();
@@ -53,9 +54,25 @@ export function SearchBox({
       setResults([]);
       return;
     }
-    const matches = searchCatalog(query).slice(0, 5);
-    setResults(matches);
-    setActive(-1);
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api<{ products: Product[] }>(
+          `products/search?query=${encodeURIComponent(query)}&limit=5`,
+        );
+        if (!cancelled && res?.products) {
+          setResults(res.products);
+          setActive(-1);
+        }
+      } catch {
+        if (!cancelled) setResults([]);
+      }
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query]);
 
   // Click outside listener
@@ -90,7 +107,7 @@ export function SearchBox({
       const picked = results[active];
       if (picked) {
         setOpen(false);
-        router.push(`/product/${picked.id}`);
+        router.push(`/product/${picked.slug || picked._id}`);
       } else {
         submit();
       }
@@ -163,7 +180,7 @@ export function SearchBox({
                 >
                   {results.map((product, i) => (
                     <li
-                      key={product.id}
+                      key={product._id || product.slug}
                       role="option"
                       aria-selected={i === active}
                     >
@@ -171,7 +188,7 @@ export function SearchBox({
                         type="button"
                         onClick={() => {
                           setOpen(false);
-                          router.push(`/product/${product.id}`);
+                          router.push(`/product/${product.slug || product._id}`);
                         }}
                         onMouseEnter={() => setActive(i)}
                         className={cn(
@@ -183,7 +200,7 @@ export function SearchBox({
                       >
                         <div className="size-10 shrink-0 overflow-hidden rounded-md border border-neutral-200">
                           <ProductVisual
-                            visualId={product.visualId}
+                            visualId={product.visualId || product.slug || "generic"}
                             name={product.name}
                             showStudioLighting={false}
                           />
@@ -193,15 +210,15 @@ export function SearchBox({
                             {product.name}
                           </p>
                           <p className="truncate text-xs text-neutral-500">
-                            {product.category} • {product.shortDescription}
+                            {product.category} • {product.shortDescription || product.description}
                           </p>
                         </div>
                         <div className="shrink-0 text-right">
                           <span className="text-sm font-bold text-neutral-900">
-                            {formatPrice(product.price)}
+                            {formatPrice(product.minPrice || product.maxPrice || 0)}
                           </span>
                           <span className="block text-[10px] text-emerald-600 font-medium">
-                            In Stock
+                            {product.totalStock > 0 ? "In Stock" : "Out of Stock"}
                           </span>
                         </div>
                       </button>

@@ -11,6 +11,7 @@ import {
   deleteVariant,
   saveVariant,
   updateProduct,
+  type ProductFieldsInput,
 } from "@/app/actions/admin";
 import { AdminCard, DataTable, EmptyRow, Td, Th, Tr } from "@/components/admin/ui";
 import { AdminField, adminInputClass } from "@/components/admin/form";
@@ -30,15 +31,25 @@ export function ProductActions({ product }: { product: Product }) {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [values, setValues] = useState({
+  const [values, setValues] = useState<ProductFieldsInput>({
     name: product.name,
     category: product.category,
     description: product.description,
+    shortDescription: product.shortDescription || "",
+    slug: product.slug || "",
+    visualId: product.visualId || "",
+    oddness: (product.oddness as ProductFieldsInput["oddness"]) || "Completely Normal",
+    badge: (product.badge as ProductFieldsInput["badge"]) || undefined,
+    scarcityNote: product.scarcityNote || "",
+    isLimited: product.isLimited ?? false,
   });
 
   function save() {
     startTransition(async () => {
-      const result = await updateProduct(product._id, values);
+      const result = await updateProduct(product._id, {
+        ...values,
+        badge: values.badge ? values.badge : undefined,
+      });
       if (result.ok) {
         toast.success("Product updated");
         setEditing(false);
@@ -83,12 +94,71 @@ export function ProductActions({ product }: { product: Product }) {
           </>
         }
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-1">
           <AdminField label="Name" value={values.name} onChange={(e) => setValues({ ...values, name: e.target.value })} />
+          <div className="grid grid-cols-2 gap-3">
+            <AdminField
+              label="Category"
+              value={values.category}
+              onChange={(e) => setValues({ ...values, category: e.target.value })}
+            />
+            <AdminField
+              label="URL Slug"
+              value={values.slug}
+              onChange={(e) => setValues({ ...values, slug: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <AdminField
+              label="Visual Style ID"
+              value={values.visualId}
+              placeholder="e.g. fresh-wifi, backup-gravity"
+              onChange={(e) => setValues({ ...values, visualId: e.target.value })}
+            />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold">Oddness Level</label>
+              <select
+                className={adminInputClass}
+                value={values.oddness}
+                onChange={(e) => setValues({ ...values, oddness: e.target.value as any })}
+              >
+                <option value="Completely Normal">Completely Normal</option>
+                <option value="Slightly Strange">Slightly Strange</option>
+                <option value="Very Strange">Very Strange</option>
+                <option value="We Should Probably Investigate">We Should Probably Investigate</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold">Product Badge</label>
+              <select
+                className={adminInputClass}
+                value={values.badge}
+                onChange={(e) => setValues({ ...values, badge: e.target.value as any })}
+              >
+                <option value="">No Badge</option>
+                <option value="Bestseller">Bestseller</option>
+                <option value="New">New</option>
+                <option value="Limited">Limited</option>
+                <option value="Almost Gone">Almost Gone</option>
+                <option value="Questionable">Questionable</option>
+                <option value="Staff Pick">Staff Pick</option>
+                <option value="Verified Somehow">Verified Somehow</option>
+                <option value="Somehow Popular">Somehow Popular</option>
+              </select>
+            </div>
+            <AdminField
+              label="Scarcity Note"
+              value={values.scarcityNote}
+              placeholder="e.g. Only 3 left in this timeline"
+              onChange={(e) => setValues({ ...values, scarcityNote: e.target.value })}
+            />
+          </div>
           <AdminField
-            label="Category"
-            value={values.category}
-            onChange={(e) => setValues({ ...values, category: e.target.value })}
+            label="Short Summary"
+            value={values.shortDescription}
+            onChange={(e) => setValues({ ...values, shortDescription: e.target.value })}
           />
           <AdminField
             label="Description"
@@ -242,12 +312,13 @@ export function ImageManager({ product }: { product: Product }) {
 // Variants
 // ---------------------------------------------------------------------------
 
-type Draft = { price: string; stock: string; sku: string; attrs: { key: string; value: string }[] };
+type Draft = { name: string; price: string; stock: string; sku: string; attrs: { key: string; value: string }[] };
 
-const blankDraft: Draft = { price: "", stock: "0", sku: "", attrs: [] };
+const blankDraft: Draft = { name: "", price: "", stock: "0", sku: "", attrs: [] };
 
 function draftFrom(variant: Variant): Draft {
   return {
+    name: variant.name ?? "",
     price: String(variant.price),
     stock: String(variant.stock),
     sku: variant.sku ?? "",
@@ -268,6 +339,7 @@ export function VariantsCard({ productId, variants }: { productId: string; varia
     );
     startTransition(async () => {
       const result = await saveVariant(productId, id, {
+        name: draft.name || undefined,
         price: draft.price,
         stock: draft.stock,
         sku: draft.sku,
@@ -306,6 +378,7 @@ export function VariantsCard({ productId, variants }: { productId: string; varia
       <DataTable>
         <thead>
           <tr>
+            <Th>Variant Name</Th>
             <Th>Attributes</Th>
             <Th>SKU</Th>
             <Th>Price</Th>
@@ -317,12 +390,13 @@ export function VariantsCard({ productId, variants }: { productId: string; varia
         </thead>
         <tbody>
           {variants.length === 0 && (
-            <EmptyRow colSpan={5}>No variants yet - a product can&apos;t be bought until it has one.</EmptyRow>
+            <EmptyRow colSpan={6}>No variants yet - a product can&apos;t be bought until it has one.</EmptyRow>
           )}
           {variants.map((variant) => {
             const attrs = Object.entries(variant.attributes ?? {});
             return (
               <Tr key={variant._id}>
+                <Td className="font-semibold text-xs text-neutral-900">{variant.name || "Standard"}</Td>
                 <Td>
                   <div className="flex flex-wrap gap-1">
                     {attrs.map(([key, value]) => (
@@ -384,6 +458,12 @@ export function VariantsCard({ productId, variants }: { productId: string; varia
       >
         {editing && (
           <div className="flex flex-col gap-4">
+            <AdminField
+              label="Variant Name"
+              placeholder="e.g. Moon Edition, 100 Mbps, Standard"
+              value={editing.draft.name}
+              onChange={(e) => setDraft({ name: e.target.value })}
+            />
             <AdminField label="SKU" placeholder="Optional" value={editing.draft.sku} onChange={(e) => setDraft({ sku: e.target.value })} />
             <div className="grid grid-cols-2 gap-4">
               <AdminField

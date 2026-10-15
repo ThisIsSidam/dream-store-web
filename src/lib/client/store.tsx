@@ -1,8 +1,10 @@
 "use client";
 
-import { YC_PRODUCTS, type CatalogProduct } from "@/lib/data/products";
+import type { Cart, Order, Product } from "@/lib/api/types";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
+import useSWR from "swr";
+import { api, swrFetcher } from "./api";
 
 export interface CartItem {
   variantId: string;
@@ -55,10 +57,10 @@ interface StoreContextType {
   total: number;
   promoCode: string;
   isPromoApplied: boolean;
-  applyPromo: (code: string) => boolean;
-  removePromo: () => void;
+  applyPromo: (code: string) => Promise<boolean> | boolean;
+  removePromo: () => Promise<void> | void;
   addToCart: (
-    product: CatalogProduct,
+    product: Product,
     variantId?: string,
     quantity?: number,
   ) => void;
@@ -70,6 +72,7 @@ interface StoreContextType {
 
   // Wishlist
   wishlist: string[];
+  wishlistProducts: Product[];
   toggleWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
   removeFromWishlist: (productId: string) => void;
@@ -80,12 +83,13 @@ interface StoreContextType {
     address: PlacedOrder["deliveryAddress"];
     deliveryOption: PlacedOrder["deliveryOption"];
     paymentMethod: PlacedOrder["paymentMethod"];
-  }) => PlacedOrder;
+  }) => Promise<PlacedOrder> | PlacedOrder;
   getOrder: (id: string) => PlacedOrder | undefined;
 
   // Recently Viewed
   recentlyViewed: string[];
-  recordView: (productId: string) => void;
+  recentlyViewedProducts: Product[];
+  recordView: (productId: string, productObj?: Product) => void;
 
   // Mystery Drop
   isMysteryRevealed: boolean;
@@ -96,154 +100,97 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | null>(null);
 
 const STORAGE_KEYS = {
-  CART: "yc_store_cart_v1",
-  SAVED: "yc_store_saved_v1",
-  WISHLIST: "yc_store_wishlist_v1",
-  ORDERS: "yc_store_orders_v1",
-  RECENT: "yc_store_recent_v1",
-  PROMO: "yc_store_promo_v1",
-  MYSTERY: "yc_store_mystery_v1",
+  CART: "dream_store_cart_v2",
+  SAVED: "dream_store_saved_v2",
+  WISHLIST: "dream_store_wishlist_v2",
+  ORDERS: "dream_store_orders_v2",
+  RECENT: "dream_store_recent_v2",
+  RECENT_ITEMS: "dream_store_recent_items_v2",
+  PROMO: "dream_store_promo_v2",
+  MYSTERY: "dream_store_mystery_v2",
 };
 
-// Default seed orders so the orders tracking screen is alive and believable right away!
-const INITIAL_ORDERS: PlacedOrder[] = [
-  {
-    id: "yc-order-5956",
-    orderNumber: "YC-5956",
-    date: "October 3, 2026",
-    items: [
-      {
-        variantId: "var_echo_std",
-        productId: "bottled-echoes",
-        name: "Bottled Echoes",
-        variantName: "Standard Resonance (440Hz)",
-        price: 399,
-        originalPrice: 450,
-        quantity: 1,
-        visualId: "bottled-echoes",
-        category: "Collectibles",
-        stock: 1220,
-      },
-    ],
-    subtotal: 399,
-    discount: 0,
-    shipping: 0,
-    tax: 31.92,
-    total: 430.92,
-    deliveryOption: "standard",
-    deliveryAddress: {
-      fullName: "Arthur Dent",
-      phone: "+1 (555) 019-2834",
-      address: "42 Sub-Etha Expressway, Apt 7B",
-      city: "Islington",
-      state: "London",
-      pin: "WC1N 3AX",
-      addressType: "Home",
-    },
-    paymentMethod: "card",
-    status: "Out for Delivery",
-    statusDescription: "It is now someone else's problem.",
-    estimatedDelivery: "Tomorrow by 8:00 PM",
-  },
-  {
-    id: "yc-order-4102",
-    orderNumber: "YC-4102",
-    date: "September 24, 2026",
-    items: [
-      {
-        variantId: "var_brk_std",
-        productId: "emotional-support-brick",
-        name: "Emotional Support Brick",
-        variantName: "Classic Terracotta Red",
-        price: 65,
-        quantity: 1,
-        visualId: "emotional-support-brick",
-        category: "Home",
-        stock: 4110,
-      },
-      {
-        variantId: "var_box_std",
-        productId: "certified-unnecessary-box",
-        name: "Certified Unnecessary Box",
-        variantName: "Space Grey Anodized",
-        price: 110,
-        quantity: 1,
-        visualId: "certified-unnecessary-box",
-        category: "Things You Didn't Need",
-        stock: 3420,
-      },
-    ],
-    subtotal: 175,
-    discount: 17.5,
-    shipping: 0,
-    tax: 14.0,
-    total: 171.5,
-    deliveryOption: "standard",
-    deliveryAddress: {
-      fullName: "Arthur Dent",
-      phone: "+1 (555) 019-2834",
-      address: "42 Sub-Etha Expressway, Apt 7B",
-      city: "Islington",
-      state: "London",
-      pin: "WC1N 3AX",
-      addressType: "Home",
-    },
-    paymentMethod: "upi",
-    status: "Delivered",
-    statusDescription: "You now own this. There is no going back.",
-    estimatedDelivery: "Delivered on September 28, 2026",
-  },
-];
+const INITIAL_ORDERS: PlacedOrder[] = [];
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [savedForLater, setSavedForLater] = useState<CartItem[]>([]);
-  const [wishlist, setWishlist] = useState<string[]>([
-    "luxury-cardboard",
-    "extra-tuesday",
-  ]);
-  const [orders, setOrders] = useState<PlacedOrder[]>(INITIAL_ORDERS);
-  const [recentlyViewed, setRecentlyViewed] = useState<string[]>([
-    "bottled-echoes",
-    "diy-black-hole-kit",
-    "emergency-backup-moon",
-  ]);
-  const [promoCode, setPromoCode] = useState<string>("");
-  const [isPromoApplied, setIsPromoApplied] = useState<boolean>(false);
+  // 1. SWR Hooks for live backend state
+  const { data: backendCart, mutate: mutateCart } = useSWR<Cart>(
+    "cart",
+    swrFetcher,
+    {
+      revalidateOnFocus: true,
+      shouldRetryOnError: false,
+    },
+  );
+
+  const { data: backendWishlist, mutate: mutateWishlist } = useSWR<{
+    wishlist: (string | Product)[];
+  }>("users/wishlist", swrFetcher, {
+    shouldRetryOnError: false,
+  });
+
+  const { data: backendOrders, mutate: mutateOrders } = useSWR<{
+    orders: Order[];
+  }>("orders", swrFetcher, {
+    shouldRetryOnError: false,
+  });
+
+  // 2. Local state for hydration & offline/fallback
+  const [localCart, setLocalCart] = useState<CartItem[]>([]);
+  const [localSavedForLater, setLocalSavedForLater] = useState<CartItem[]>([]);
+  const [localWishlist, setLocalWishlist] = useState<string[]>([]);
+  const [localOrders, setLocalOrders] = useState<PlacedOrder[]>(INITIAL_ORDERS);
+  const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
+  const [recentlyViewedProducts, setRecentlyViewedProducts] = useState<Product[]>([]);
+  const [localPromo, setLocalPromo] = useState<string>("");
   const [isMysteryRevealed, setIsMysteryRevealed] = useState<boolean>(false);
   const [hydrated, setHydrated] = useState(false);
 
   // Load from localStorage on mount
   useEffect(() => {
     try {
+      // Purge legacy mock data
+      try {
+        localStorage.removeItem("yc_store_orders_v1");
+        localStorage.removeItem("yc_store_wishlist_v1");
+        localStorage.removeItem("yc_store_recent_v1");
+        localStorage.removeItem("yc_store_recent_items_v1");
+        localStorage.removeItem("yc_store_cart_v1");
+        localStorage.removeItem("yc_store_saved_v1");
+      } catch {}
       const storedCart = localStorage.getItem(STORAGE_KEYS.CART);
-      if (storedCart) setCart(JSON.parse(storedCart));
+      if (storedCart) setLocalCart(JSON.parse(storedCart));
 
       const storedSaved = localStorage.getItem(STORAGE_KEYS.SAVED);
-      if (storedSaved) setSavedForLater(JSON.parse(storedSaved));
+      if (storedSaved) setLocalSavedForLater(JSON.parse(storedSaved));
 
       const storedWish = localStorage.getItem(STORAGE_KEYS.WISHLIST);
-      if (storedWish) setWishlist(JSON.parse(storedWish));
+      if (storedWish) setLocalWishlist(JSON.parse(storedWish));
 
       const storedOrders = localStorage.getItem(STORAGE_KEYS.ORDERS);
       if (storedOrders) {
         const parsed = JSON.parse(storedOrders);
-        if (Array.isArray(parsed) && parsed.length > 0) setOrders(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) setLocalOrders(parsed);
       }
 
       const storedRecent = localStorage.getItem(STORAGE_KEYS.RECENT);
       if (storedRecent) setRecentlyViewed(JSON.parse(storedRecent));
 
-      const storedPromo = localStorage.getItem(STORAGE_KEYS.PROMO);
-      if (storedPromo === "QUESTIONABLE10") {
-        setPromoCode("QUESTIONABLE10");
-        setIsPromoApplied(true);
+      const storedRecentItems = localStorage.getItem(STORAGE_KEYS.RECENT_ITEMS);
+      if (storedRecentItems) {
+        try {
+          const parsed = JSON.parse(storedRecentItems);
+          if (Array.isArray(parsed)) setRecentlyViewedProducts(parsed);
+        } catch {}
       }
+
+      const storedPromo = localStorage.getItem(STORAGE_KEYS.PROMO);
+      if (storedPromo) setLocalPromo(storedPromo);
 
       const storedMystery = localStorage.getItem(STORAGE_KEYS.MYSTERY);
       if (storedMystery === "true") setIsMysteryRevealed(true);
     } catch {
-      // Storage unavailable or disabled
+      // Storage unavailable
     } finally {
       setHydrated(true);
     }
@@ -253,66 +200,153 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
     try {
-      localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(cart));
-    } catch {}
-  }, [cart, hydrated]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(savedForLater));
-    } catch {}
-  }, [savedForLater, hydrated]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.WISHLIST, JSON.stringify(wishlist));
-    } catch {}
-  }, [wishlist, hydrated]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
-    } catch {}
-  }, [orders, hydrated]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
       localStorage.setItem(STORAGE_KEYS.RECENT, JSON.stringify(recentlyViewed));
+      localStorage.setItem(
+        STORAGE_KEYS.RECENT_ITEMS,
+        JSON.stringify(recentlyViewedProducts),
+      );
     } catch {}
-  }, [recentlyViewed, hydrated]);
+  }, [recentlyViewed, recentlyViewedProducts, hydrated]);
 
-  // Calculations
+  // Map backend cart items to CartItem format
+  const cart: CartItem[] =
+    backendCart && backendCart.items
+      ? backendCart.items.map((item) => ({
+          variantId: item.variantId,
+          productId: item.productId,
+          name: item.name,
+          variantName: item.variantName,
+          price: item.price,
+          quantity: item.quantity,
+          visualId:
+            item.productImage ||
+            (typeof item.productId === "string" ? item.productId : "unknown"),
+          category: "",
+          stock: 100,
+        }))
+      : localCart;
+
+  const savedForLater: CartItem[] =
+    backendCart && backendCart.savedForLater
+      ? backendCart.savedForLater.map((s) => ({
+          variantId: s.variantId,
+          productId: s.variantId,
+          name: s.name || "Artifact",
+          price: 0,
+          quantity: s.quantity,
+          visualId: s.variantId,
+          category: "",
+          stock: 100,
+        }))
+      : localSavedForLater;
+
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
-  const discount = isPromoApplied ? Math.round(subtotal * 0.1 * 100) / 100 : 0;
-  const shipping = subtotal > 500 || subtotal === 0 ? 0 : 25;
-  const tax = Math.round((subtotal - discount) * 0.08 * 100) / 100;
-  const total = Math.max(
-    0,
-    Math.round((subtotal - discount + shipping + tax) * 100) / 100,
-  );
 
-  function addToCart(
-    product: CatalogProduct,
+  // Price calculations: prioritize backend priceBreakup, else local math
+  const subtotal =
+    backendCart?.priceBreakup?.subtotal ??
+    cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const discount =
+    backendCart?.priceBreakup?.discount ??
+    (localPromo ? Math.round(subtotal * 0.1 * 100) / 100 : 0);
+
+  const shipping =
+    backendCart?.priceBreakup?.shipping ??
+    (subtotal > 500 || subtotal === 0 ? 0 : 40);
+
+  const tax =
+    backendCart?.priceBreakup?.tax ??
+    Math.round((subtotal - discount) * 0.05 * 100) / 100;
+
+  const total =
+    backendCart?.priceBreakup?.total ??
+    Math.max(0, Math.round((subtotal - discount + shipping + tax) * 100) / 100);
+
+  const promoCode = backendCart?.couponCode || localPromo;
+  const isPromoApplied = Boolean(promoCode);
+
+  // Wishlist: map from backend wishlist items
+  const wishlist: string[] =
+    backendWishlist && Array.isArray(backendWishlist.wishlist)
+      ? backendWishlist.wishlist
+          .map((item) =>
+            typeof item === "string" ? item : item._id || item.slug || "",
+          )
+          .filter(Boolean)
+      : localWishlist;
+
+  const wishlistProducts: Product[] =
+    backendWishlist && Array.isArray(backendWishlist.wishlist)
+      ? backendWishlist.wishlist.filter(
+          (item): item is Product => typeof item === "object" && item !== null,
+        )
+      : [];
+
+  // Orders: map from backend orders
+  const orders: PlacedOrder[] =
+    backendOrders &&
+    Array.isArray(backendOrders.orders) &&
+    backendOrders.orders.length > 0
+      ? backendOrders.orders.map((o) => ({
+          id: o._id,
+          orderNumber: o.orderNumber || `DRM-${o._id.slice(-4).toUpperCase()}`,
+          date: new Date(o.createdAt).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          }),
+          items: o.items.map((i) => ({
+            variantId: i.variantId,
+            productId: i.productId,
+            name: i.name,
+            variantName: i.variantName,
+            price: i.price,
+            quantity: i.quantity,
+            visualId: i.productImage || i.productId,
+            category: "",
+            stock: 100,
+          })),
+          subtotal: o.priceBreakup?.subtotal || 0,
+          discount: o.priceBreakup?.discount || 0,
+          shipping: o.priceBreakup?.shipping || 0,
+          tax: o.priceBreakup?.tax || 0,
+          total: o.priceBreakup?.total || 0,
+          deliveryOption:
+            (o.deliveryOption as PlacedOrder["deliveryOption"]) || "standard",
+          deliveryAddress: o.deliveryAddress || {
+            fullName: "Recipient",
+            phone: "",
+            address: "Local Sector",
+            city: "Home",
+            state: "Primary Timeline",
+            pin: "00000",
+            addressType: "Home",
+          },
+          paymentMethod:
+            (o.paymentMethod as PlacedOrder["paymentMethod"]) || "card",
+          status: o.trackingStatus || "Ordered",
+          statusDescription:
+            o.trackingTimeline?.[o.trackingTimeline.length - 1]?.desc ||
+            "Order confirmed and logged.",
+          estimatedDelivery: o.estimatedDelivery || "In 3-5 business days",
+        }))
+      : localOrders;
+
+  // -------------------------------------------------------------
+  // CART ACTIONS
+  // -------------------------------------------------------------
+  async function addToCart(
+    product: Product,
     variantId?: string,
     quantity = 1,
   ) {
-    const chosenVariant = variantId
-      ? product.variants.find((v) => v.id === variantId)
-      : product.variants[0];
+    const pSlug: string = product.slug || product._id;
+    const targetVariantId: string = variantId || product._id || pSlug;
+    const visualId: string = product.visualId || pSlug || "generic";
 
-    const targetVariantId = chosenVariant?.id || `var_${product.id}_def`;
-    const price = chosenVariant ? chosenVariant.price : product.price;
-    const variantName = chosenVariant ? chosenVariant.name : undefined;
-
-    setCart((prev) => {
+    // 1. Optimistic local update
+    setLocalCart((prev) => {
       const existing = prev.find((item) => item.variantId === targetVariantId);
       if (existing) {
         return prev.map((item) =>
@@ -321,164 +355,291 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             : item,
         );
       }
-      return [
-        ...prev,
-        {
-          variantId: targetVariantId,
-          productId: product.id,
-          name: product.name,
-          variantName,
-          price,
-          originalPrice: product.originalPrice,
-          quantity,
-          visualId: product.visualId,
-          category: product.category,
-          stock: chosenVariant ? chosenVariant.stock : product.totalStock,
-        },
-      ];
+      const newItem: CartItem = {
+        variantId: targetVariantId,
+        productId: product._id || pSlug,
+        name: product.name,
+        price: product.minPrice || 199,
+        quantity,
+        visualId,
+        category: product.category,
+        stock: product.totalStock || 100,
+      };
+      return [...prev, newItem];
     });
 
     toast.success(`Added ${product.name} to cart.`, {
       description: "You have made a decision.",
     });
+
+    // 2. Synchronize with backend
+    try {
+      await api("cart/add", {
+        method: "POST",
+        body: {
+          variantId: targetVariantId,
+          name: product.name,
+          quantity,
+        },
+      });
+      await mutateCart();
+    } catch {
+      // Offline fallback: keep local
+    }
   }
 
-  function updateQuantity(variantId: string, quantity: number) {
+  async function updateQuantity(variantId: string, quantity: number) {
     if (quantity <= 0) {
       removeFromCart(variantId);
       return;
     }
-    setCart((prev) =>
+
+    setLocalCart((prev) =>
       prev.map((item) =>
         item.variantId === variantId ? { ...item, quantity } : item,
       ),
     );
+
+    try {
+      await api(`cart/items/${variantId}`, {
+        method: "PATCH",
+        body: { quantity },
+      });
+      await mutateCart();
+    } catch {
+      // Local state already updated
+    }
   }
 
-  function removeFromCart(variantId: string) {
-    setCart((prev) => prev.filter((item) => item.variantId !== variantId));
+  async function removeFromCart(variantId: string) {
+    setLocalCart((prev) => prev.filter((item) => item.variantId !== variantId));
     toast.message("Item removed from cart.");
+
+    try {
+      await api(`cart/items/${variantId}`, { method: "DELETE" });
+      await mutateCart();
+    } catch {
+      // Local state updated
+    }
   }
 
-  function saveForLater(variantId: string) {
+  async function saveForLater(variantId: string) {
     const item = cart.find((i) => i.variantId === variantId);
     if (!item) return;
 
-    setCart((prev) => prev.filter((i) => i.variantId !== variantId));
-    setSavedForLater((prev) => [
+    setLocalCart((prev) => prev.filter((i) => i.variantId !== variantId));
+    setLocalSavedForLater((prev) => [
       ...prev.filter((i) => i.variantId !== variantId),
       item,
     ]);
     toast.message(`Saved "${item.name}" for later consideration.`);
+
+    try {
+      await api(`cart/save-for-later/${variantId}`, { method: "POST" });
+      await mutateCart();
+    } catch {}
   }
 
-  function moveToCartFromSaved(variantId: string) {
+  async function moveToCartFromSaved(variantId: string) {
     const item = savedForLater.find((i) => i.variantId === variantId);
     if (!item) return;
 
-    setSavedForLater((prev) => prev.filter((i) => i.variantId !== variantId));
-    setCart((prev) => [...prev, item]);
+    setLocalSavedForLater((prev) =>
+      prev.filter((i) => i.variantId !== variantId),
+    );
+    setLocalCart((prev) => [...prev, item]);
     toast.success(`Moved "${item.name}" to cart.`);
+
+    try {
+      await api(`cart/move-to-cart/${variantId}`, { method: "POST" });
+      await mutateCart();
+    } catch {}
   }
 
   function clearCart() {
-    setCart([]);
+    setLocalCart([]);
+    mutateCart(undefined, false);
   }
 
-  function applyPromo(code: string): boolean {
+  async function applyPromo(code: string): Promise<boolean> {
     const clean = code.trim().toUpperCase();
-    if (clean === "QUESTIONABLE10") {
-      setPromoCode("QUESTIONABLE10");
-      setIsPromoApplied(true);
-      try {
-        localStorage.setItem(STORAGE_KEYS.PROMO, "QUESTIONABLE10");
-      } catch {}
-      toast.success("Promo code applied! 10% Questionable Discount granted.");
+    try {
+      await api("cart/coupon", {
+        method: "POST",
+        body: { couponCode: clean },
+      });
+      await mutateCart();
+      setLocalPromo(clean);
+      toast.success(`Promo code "${clean}" applied!`);
       return true;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Invalid promo code.";
+      toast.error(msg);
+      return false;
     }
-    toast.error("Invalid promo code. Did you invent this code?");
-    return false;
   }
 
-  function removePromo() {
-    setPromoCode("");
-    setIsPromoApplied(false);
+  async function removePromo() {
+    setLocalPromo("");
     try {
-      localStorage.removeItem(STORAGE_KEYS.PROMO);
+      await api("cart/coupon", { method: "DELETE" });
+      await mutateCart();
     } catch {}
     toast.message("Promo code removed.");
   }
 
-  function toggleWishlist(productId: string) {
-    setWishlist((prev) => {
-      const exists = prev.includes(productId);
-      const target = YC_PRODUCTS.find((p) => p.id === productId);
-      if (exists) {
-        toast.message(`Removed "${target?.name || productId}" from wishlist.`);
-        return prev.filter((id) => id !== productId);
-      } else {
-        toast.success(`Added "${target?.name || productId}" to wishlist.`, {
-          description: "Saved for unnecessary contemplation.",
-        });
-        return [...prev, productId];
-      }
-    });
+  // -------------------------------------------------------------
+  // WISHLIST ACTIONS
+  // -------------------------------------------------------------
+  async function toggleWishlist(productId: string) {
+    const isPresent = wishlist.includes(productId);
+
+    if (isPresent) {
+      setLocalWishlist((prev) => prev.filter((id) => id !== productId));
+      toast.message("Removed from wishlist.");
+      try {
+        await api(`users/wishlist/${productId}`, { method: "DELETE" });
+        await mutateWishlist();
+      } catch {}
+    } else {
+      setLocalWishlist((prev) => [...prev, productId]);
+      toast.success("Added to wishlist.", {
+        description: "Saved for unnecessary contemplation.",
+      });
+      try {
+        await api(`users/wishlist/${productId}`, { method: "POST" });
+        await mutateWishlist();
+      } catch {}
+    }
   }
 
   function isInWishlist(productId: string) {
     return wishlist.includes(productId);
   }
 
-  function removeFromWishlist(productId: string) {
-    setWishlist((prev) => prev.filter((id) => id !== productId));
+  async function removeFromWishlist(productId: string) {
+    setLocalWishlist((prev) => prev.filter((id) => id !== productId));
+    try {
+      await api(`users/wishlist/${productId}`, { method: "DELETE" });
+      await mutateWishlist();
+    } catch {}
   }
 
-  function recordView(productId: string) {
+  function recordView(productId: string, productObj?: Product) {
     setRecentlyViewed((prev) =>
       [productId, ...prev.filter((id) => id !== productId)].slice(0, 8),
     );
+    if (productObj) {
+      setRecentlyViewedProducts((prev) =>
+        [
+          productObj,
+          ...prev.filter(
+            (p) =>
+              p._id !== productObj._id &&
+              (!productObj.slug || p.slug !== productObj.slug),
+          ),
+        ].slice(0, 8),
+      );
+    }
   }
 
-  function placeOrder(details: {
+  // -------------------------------------------------------------
+  // ORDER ACTIONS
+  // -------------------------------------------------------------
+  async function placeOrder(details: {
     address: PlacedOrder["deliveryAddress"];
     deliveryOption: PlacedOrder["deliveryOption"];
     paymentMethod: PlacedOrder["paymentMethod"];
-  }): PlacedOrder {
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const orderNumber = `YC-${randomNum}`;
-    const id = `yc-order-${randomNum}`;
+  }): Promise<PlacedOrder> {
+    // 1. Try backend order placement
+    try {
+      const created = await api<{ order: Order }>("orders", {
+        method: "POST",
+        body: {
+          deliveryAddress: details.address,
+          deliveryOption: details.deliveryOption,
+          paymentMethod: details.paymentMethod,
+        },
+      });
 
-    const newOrder: PlacedOrder = {
-      id,
-      orderNumber,
-      date: new Date().toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      }),
-      items: [...cart],
-      subtotal,
-      discount,
-      shipping,
-      tax,
-      total,
-      deliveryOption: details.deliveryOption,
-      deliveryAddress: details.address,
-      paymentMethod: details.paymentMethod,
-      status: "Ordered",
-      statusDescription: "Someone has carefully placed it inside a box.",
-      estimatedDelivery:
-        details.deliveryOption === "temporal"
-          ? "Arrived Yesterday (check temporal buffer)"
-          : details.deliveryOption === "express"
-            ? "Tomorrow by 5:00 PM"
-            : "In 3-5 business days",
-    };
+      const orderDoc = created.order || created;
 
-    setOrders((prev) => [newOrder, ...prev]);
-    clearCart();
+      // 2. Confirm payment to advance order status and schedule tracking
+      await api("orders/confirm-payment", {
+        method: "POST",
+        body: { orderId: orderDoc._id },
+      });
 
-    return newOrder;
+      clearCart();
+      await mutateCart();
+      await mutateOrders();
+
+      const confirmedOrder: PlacedOrder = {
+        id: orderDoc._id,
+        orderNumber:
+          orderDoc.orderNumber || `DRM-${orderDoc._id.slice(-4).toUpperCase()}`,
+        date: new Date().toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        }),
+        items: [...cart],
+        subtotal,
+        discount,
+        shipping,
+        tax,
+        total,
+        deliveryOption: details.deliveryOption,
+        deliveryAddress: details.address,
+        paymentMethod: details.paymentMethod,
+        status: "Ordered",
+        statusDescription: "Transaction recorded in the great ledger.",
+        estimatedDelivery: orderDoc.estimatedDelivery || "In 3-5 business days",
+      };
+
+      setLocalOrders((prev) => [confirmedOrder, ...prev]);
+      return confirmedOrder;
+    } catch (err) {
+      console.warn(
+        "Backend order creation failed, generating local confirmed order:",
+        err,
+      );
+      // Fallback local order creation
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const orderNumber = `YC-${randomNum}`;
+      const id = `yc-order-${randomNum}`;
+
+      const fallbackOrder: PlacedOrder = {
+        id,
+        orderNumber,
+        date: new Date().toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        }),
+        items: [...cart],
+        subtotal,
+        discount,
+        shipping,
+        tax,
+        total,
+        deliveryOption: details.deliveryOption,
+        deliveryAddress: details.address,
+        paymentMethod: details.paymentMethod,
+        status: "Ordered",
+        statusDescription: "Transaction recorded in the great ledger.",
+        estimatedDelivery:
+          details.deliveryOption === "temporal"
+            ? "Arrived Yesterday (check temporal buffer)"
+            : details.deliveryOption === "express"
+              ? "Tomorrow by 5:00 PM"
+              : "In 3-5 business days",
+      };
+
+      setLocalOrders((prev) => [fallbackOrder, ...prev]);
+      clearCart();
+      return fallbackOrder;
+    }
   }
 
   function getOrder(id: string): PlacedOrder | undefined {
@@ -500,7 +661,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
-  function subscribeMysteryNotification(email: string) {
+  async function subscribeMysteryNotification(email: string) {
+    try {
+      await api("newsletter/subscribe", {
+        method: "POST",
+        body: { email },
+      });
+    } catch {
+      // Ignore if already subscribed or offline
+    }
     toast.success(`Notification set for ${email}.`, {
       description: "We will alert you when reality bends.",
     });
@@ -528,6 +697,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         moveToCartFromSaved,
         clearCart,
         wishlist,
+        wishlistProducts,
         toggleWishlist,
         isInWishlist,
         removeFromWishlist,
@@ -535,6 +705,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         placeOrder,
         getOrder,
         recentlyViewed,
+        recentlyViewedProducts,
         recordView,
         isMysteryRevealed,
         revealMysteryDrop,

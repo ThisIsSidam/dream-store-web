@@ -58,10 +58,11 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error), values: echo(formData) };
 
   let result: AuthResult;
+  const guestId = (await cookies()).get(GUEST_COOKIE)?.value;
   try {
     result = await backend<AuthResult>("/users/signin", {
       method: "POST",
-      body: parsed.data,
+      body: { ...parsed.data, guestId },
       auth: "none",
     });
   } catch (error) {

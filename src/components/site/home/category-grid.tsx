@@ -1,4 +1,4 @@
-import { CATEGORY_EXPLORE_CARDS } from "@/lib/data/products";
+import type { Category } from "@/lib/api/types";
 import {
   ArrowUpRight,
   Atom,
@@ -10,7 +10,60 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export function CategoryGrid() {
+const DEFAULT_EXPLORE_CARDS = [
+  {
+    name: "Weird Stuff",
+    description: "Anomalies that passed quality control under curious circumstances.",
+    href: "/products?category=Weird+Stuff",
+    icon: "sparkles",
+  },
+  {
+    name: "Home",
+    description: "Things that technically belong in your home.",
+    href: "/products?category=Home",
+    icon: "home",
+  },
+  {
+    name: "Science",
+    description: "Science-adjacent objects of varying legitimacy.",
+    href: "/products?category=Science",
+    icon: "atom",
+  },
+  {
+    name: "Collectibles",
+    description: "Things worth keeping for reasons we cannot explain.",
+    href: "/products?category=Collectibles",
+    icon: "sparkles",
+  },
+  {
+    name: "Everyday Things",
+    description: "Ordinary objects with extraordinary problems.",
+    href: "/products?category=Everyday+Things",
+    icon: "clock",
+  },
+  {
+    name: "Mysterious",
+    description: "You won't know what it is until you buy it.",
+    href: "/products?category=Mysterious",
+    icon: "eye",
+  },
+];
+
+interface CategoryGridProps {
+  categories?: Category[];
+}
+
+export function CategoryGrid({ categories }: CategoryGridProps) {
+  const cards =
+    categories && categories.length > 0
+      ? categories.map((c) => ({
+          name: c.name,
+          description: c.description || "Questionable taxonomy and items.",
+          href: c.path || `/products?category=${encodeURIComponent(c.name)}`,
+          icon: c.icon || "box",
+        }))
+      : DEFAULT_EXPLORE_CARDS;
+
   return (
     <section className="border-b border-neutral-200/80 bg-neutral-50/60 py-12 md:py-16">
       <div className="mx-auto max-w-[1360px] px-4">
@@ -32,7 +85,7 @@ export function CategoryGrid() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {CATEGORY_EXPLORE_CARDS.map((cat) => {
+          {cards.map((cat) => {
             const Icon = getCategoryIcon(cat.icon);
             return (
               <Link
@@ -45,9 +98,6 @@ export function CategoryGrid() {
                     <div className="grid size-10 place-items-center rounded-lg bg-neutral-100 text-neutral-800 transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-600">
                       <Icon className="size-5" />
                     </div>
-                    <span className="text-xs font-mono text-neutral-400">
-                      {cat.count} items
-                    </span>
                   </div>
 
                   <h3 className="font-sans text-lg font-bold text-neutral-900 group-hover:text-indigo-600 transition-colors">

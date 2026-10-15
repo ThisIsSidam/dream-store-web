@@ -1,7 +1,7 @@
 import { ApiError, extractErrorMessage } from "@/lib/api/errors";
 
 type Init = {
-  method?: "GET" | "POST" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
 };
 
@@ -9,17 +9,24 @@ type Init = {
  * Client-side call to the backend, routed through /api/backend so the
  * httpOnly session cookie is attached server-side.
  */
-export async function api<T>(path: string, { method = "GET", body }: Init = {}): Promise<T> {
+export async function api<T>(
+  path: string,
+  { method = "GET", body }: Init = {},
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`/api/backend/${path.replace(/^\/+/, "")}`, {
       method,
-      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      headers:
+        body === undefined ? undefined : { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
       credentials: "same-origin",
     });
   } catch {
-    throw new ApiError("Can't reach the store. Check your connection and try again.", 503);
+    throw new ApiError(
+      "Can't reach the store. Check your connection and try again.",
+      503,
+    );
   }
 
   const json: unknown = await response.json().catch(() => null);
