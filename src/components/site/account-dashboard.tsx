@@ -1,7 +1,8 @@
 "use client";
 
 import { signOut } from "@/app/actions/auth";
-import { ProductVisual } from "@/components/ui/product-visual";
+import { ProductImage } from "@/components/product/product-image";
+import { messageOf } from "@/lib/api/errors";
 import { api, swrFetcher } from "@/lib/client/api";
 import { useStore } from "@/lib/client/store";
 import { cn, formatPrice } from "@/lib/utils";
@@ -20,7 +21,7 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 
@@ -36,20 +37,39 @@ type Tab =
 interface AccountDashboardProps {
   userName?: string;
   userEmail?: string;
-  userRole?: string;
 }
+
+type AddressDraft = {
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pin: string;
+  addressType: string;
+  isDefault: boolean;
+};
+
+const blankAddress = (fullName: string, isDefault: boolean): AddressDraft => ({
+  fullName,
+  phone: "",
+  address: "",
+  city: "",
+  state: "",
+  pin: "",
+  addressType: "Home",
+  isDefault,
+});
 
 export function AccountDashboard({
   userName = "",
   userEmail = "",
-  userRole = "user",
 }: AccountDashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const {
     orders,
     wishlist,
     wishlistProducts,
-    recentlyViewed,
     recentlyViewedProducts,
     savedForLater,
   } = useStore();
@@ -79,33 +99,15 @@ export function AccountDashboard({
   const addresses = me?.addresses || [];
 
   // Profile edit state
-  const [profileName, setProfileName] = useState(displayName);
+  const [profileEdit, setProfileName] = useState<string | null>(null);
+  const profileName = profileEdit ?? displayName;
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-
-  useEffect(() => {
-    if (me?.name) setProfileName(me.name);
-  }, [me?.name]);
 
   // Address add state
   const [showAddAddress, setShowAddAddress] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
-  const [addressForm, setAddressForm] = useState({
-    fullName: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    pin: "",
-    addressType: "Home",
-    isDefault: true,
-  });
-
-  useEffect(() => {
-    setAddressForm((prev) => ({
-      ...prev,
-      fullName: prev.fullName || displayName,
-    }));
-  }, [displayName]);
+  const [addressEdits, setAddressForm] = useState<AddressDraft | null>(null);
+  const addressForm: AddressDraft = addressEdits ?? blankAddress(displayName, true);
 
   const recentProducts = recentlyViewedProducts || [];
   const wishProducts = wishlistProducts || [];
@@ -124,8 +126,8 @@ export function AccountDashboard({
       });
       await mutateMe();
       toast.success("Account preferences updated.");
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to update profile.");
+    } catch (err) {
+      toast.error(messageOf(err, "Failed to update profile."));
     } finally {
       setIsSavingProfile(false);
     }
@@ -150,19 +152,10 @@ export function AccountDashboard({
       });
       await mutateMe();
       setShowAddAddress(false);
-      setAddressForm({
-        fullName: displayName,
-        phone: "",
-        address: "",
-        city: "",
-        state: "",
-        pin: "",
-        addressType: "Home",
-        isDefault: false,
-      });
+      setAddressForm(blankAddress(displayName, false));
       toast.success("New address saved.");
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to save address.");
+    } catch (err) {
+      toast.error(messageOf(err, "Failed to save address."));
     } finally {
       setIsSavingAddress(false);
     }
@@ -175,8 +168,8 @@ export function AccountDashboard({
       });
       await mutateMe();
       toast.success("Address deleted.");
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to delete address.");
+    } catch (err) {
+      toast.error(messageOf(err, "Failed to delete address."));
     }
   }
 
@@ -360,9 +353,12 @@ export function AccountDashboard({
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-lg bg-neutral-50/70 border border-neutral-100">
                     <div className="flex items-center gap-3">
                       <div className="size-14 rounded border border-neutral-200 bg-white overflow-hidden shrink-0">
-                        <ProductVisual
+                        <ProductImage
+                          src={orders[0].items[0]?.image}
                           visualId={orders[0].items[0]?.visualId || "generic"}
+                          name={orders[0].items[0]?.name}
                           showStudioLighting={false}
+                          sizes="56px"
                         />
                       </div>
                       <div>
@@ -470,9 +466,12 @@ export function AccountDashboard({
                         className="flex items-center gap-3 p-3 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all"
                       >
                         <div className="size-14 rounded border border-neutral-200 bg-neutral-50 overflow-hidden shrink-0">
-                          <ProductVisual
+                          <ProductImage
+                            images={p.images}
                             visualId={p.visualId || p.slug || ""}
+                            name={p.name}
                             showStudioLighting={false}
+                            sizes="56px"
                           />
                         </div>
                         <div className="min-w-0">
@@ -858,8 +857,10 @@ export function AccountDashboard({
                         className="flex flex-col rounded-lg border border-neutral-200 p-3 hover:border-neutral-300 transition-all text-xs"
                       >
                         <div className="aspect-square w-full rounded bg-neutral-50 overflow-hidden mb-2">
-                          <ProductVisual
+                          <ProductImage
+                            images={p.images}
                             visualId={p.visualId || p.slug || ""}
+                            name={p.name}
                             showStudioLighting={false}
                           />
                         </div>

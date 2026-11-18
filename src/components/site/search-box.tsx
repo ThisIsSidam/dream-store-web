@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductVisual } from "@/components/ui/product-visual";
+import { ProductImage } from "@/components/product/product-image";
 import type { Product } from "@/lib/api/types";
 import { api } from "@/lib/client/api";
 import { cn, formatPrice } from "@/lib/utils";
@@ -44,16 +44,15 @@ export function SearchBox({
   const rootRef = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
-  const [results, setResults] = useState<Product[]>([]);
+  const [fetched, setFetched] = useState<Product[]>([]);
   const [active, setActive] = useState(-1);
 
   const query = value.trim();
+  // Nothing typed means nothing to show, whatever the last lookup returned.
+  const results = query ? fetched : [];
 
   useEffect(() => {
-    if (!query) {
-      setResults([]);
-      return;
-    }
+    if (!query) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
@@ -61,11 +60,11 @@ export function SearchBox({
           `products/search?query=${encodeURIComponent(query)}&limit=5`,
         );
         if (!cancelled && res?.products) {
-          setResults(res.products);
+          setFetched(res.products);
           setActive(-1);
         }
       } catch {
-        if (!cancelled) setResults([]);
+        if (!cancelled) setFetched([]);
       }
     }, 150);
 
@@ -141,10 +140,7 @@ export function SearchBox({
           <button
             type="button"
             aria-label="Clear search"
-            onClick={() => {
-              setValue("");
-              setResults([]);
-            }}
+            onClick={() => setValue("")}
             className="grid size-6 place-items-center rounded-full text-neutral-400 hover:bg-neutral-200/60 hover:text-neutral-700 mr-1"
           >
             <X className="size-3.5" />
@@ -199,10 +195,12 @@ export function SearchBox({
                         )}
                       >
                         <div className="size-10 shrink-0 overflow-hidden rounded-md border border-neutral-200">
-                          <ProductVisual
+                          <ProductImage
+                            images={product.images}
                             visualId={product.visualId || product.slug || "generic"}
                             name={product.name}
                             showStudioLighting={false}
+                            sizes="40px"
                           />
                         </div>
                         <div className="min-w-0 flex-1">

@@ -6,11 +6,14 @@ export async function CategoryNav() {
 
   const items = [
     { id: "all", name: "All", path: "/products" },
-    ...categories.map((c) => ({
-      id: c._id || c.name,
-      name: c.name,
-      path: c.path || `/products?category=${encodeURIComponent(c.name)}`,
-    })),
+    // The nav supplies its own "All"; skip one that comes back with the categories.
+    ...categories
+      .filter((c) => c.name.trim().toLowerCase() !== "all")
+      .map((c) => ({
+        id: c._id || c.name,
+        name: c.name,
+        path: c.path || `/products?category=${encodeURIComponent(c.name)}`,
+      })),
   ];
 
   return (

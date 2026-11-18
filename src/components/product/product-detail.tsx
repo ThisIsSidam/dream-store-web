@@ -1,9 +1,11 @@
 "use client";
 
+import { ProductImage } from "@/components/product/product-image";
 import { ProductVisual } from "@/components/ui/product-visual";
 import type { Product, ReviewsResponse, Variant } from "@/lib/api/types";
 import { api, swrFetcher } from "@/lib/client/api";
 import { useStore } from "@/lib/client/store";
+import { getProductImageUrls } from "@/lib/product-images";
 export interface CatalogReview {
   id: string;
   author: string;
@@ -17,13 +19,10 @@ export interface CatalogReview {
 import { cn, formatPrice } from "@/lib/utils";
 import {
   Award,
-  Box,
   Check,
   CheckCircle2,
-  Eye,
   Heart,
   Minus,
-  Package,
   Plus,
   RotateCcw,
   ShieldCheck,
@@ -37,6 +36,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
+
+/** What the main gallery stage is showing. */
+type GalleryView =
+  | { kind: "photo"; index: number }
+  | { kind: "art" }
+  | { kind: "certificate" };
 
 interface ProductDetailProps {
   product: Product;
@@ -62,9 +67,12 @@ export function ProductDetail({
     variants[0]?._id || "default",
   );
   const [quantity, setQuantity] = useState(1);
-  const [activeAngle, setActiveAngle] = useState<
-    "front" | "macro" | "packaging" | "certificate"
-  >("front");
+  const photoUrls = getProductImageUrls(product.images);
+  const artId = product.visualId || product.slug || "generic";
+  // Open on the first photo; products without photos open on their artwork.
+  const [view, setView] = useState<GalleryView>(
+    photoUrls.length > 0 ? { kind: "photo", index: 0 } : { kind: "art" },
+  );
   const [zipCode, setZipCode] = useState("");
   const [zipChecked, setZipChecked] = useState(false);
   const { data: reviewsData, mutate: mutateReviews } = useSWR<ReviewsResponse>(
@@ -132,21 +140,23 @@ export function ProductDetail({
           : 0;
       return acc + itemPrice;
     }, 0);
-  const bundleDiscounted = Math.round(bundleTotal * 0.9);
 
   function handleAddToCart() {
-    addToCart(product, selectedVariantId, quantity);
+    // Products without variants have no id to send; the backend then uses the first one.
+    return addToCart(product, activeVariant?._id, quantity);
   }
 
-  function handleBuyNow() {
-    handleAddToCart();
-    router.push("/checkout");
+  async function handleBuyNow() {
+    // Only head to checkout once the backend has actually put it in the cart.
+    if (await handleAddToCart()) router.push("/checkout");
   }
 
-  function handleAddBundle() {
-    addToCart(product, selectedVariantId, 1);
-    bundleItems.forEach((item) => addToCart(item, undefined, 1));
-    toast.success("Added bundle to cart with 10% synergy discount!");
+  async function handleAddBundle() {
+    // One at a time: each add re-prices the cart, and a failure should stop the run.
+    for (const item of [product, ...bundleItems]) {
+      const variantId = item === product ? activeVariant?._id : undefined;
+      if (!(await addToCart(item, variantId, 1))) return;
+    }
   }
 
   async function handleUpvote(revId: string) {
@@ -214,7 +224,7 @@ export function ProductDetail({
         <div className="lg:col-span-6 flex flex-col gap-4">
           {/* Main Visual Display */}
           <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50/80 shadow-xs">
-            {activeAngle === "certificate" ? (
+            {view.kind === "certificate" ? (
               <div className="size-full flex flex-col items-center justify-center p-8 text-center bg-amber-50/30">
                 <div className="rounded-full border-2 border-amber-600 p-3 text-amber-700 mb-3">
                   <Award className="size-8" />
@@ -232,9 +242,19 @@ export function ProductDetail({
                   SEALED IN THE YEAR 2026 • Y-COMBINONSENSE ARCHIVES
                 </div>
               </div>
+            ) : view.kind === "photo" ? (
+              <ProductImage
+                src={photoUrls[view.index]}
+                visualId={artId}
+                name={product.name}
+                className="size-full"
+                fit="contain"
+                priority
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
             ) : (
               <ProductVisual
-                visualId={product.visualId || product.slug || "generic"}
+                visualId={artId}
                 name={product.name}
                 className="size-full"
               />
@@ -250,36 +270,71 @@ export function ProductDetail({
             )}
           </div>
 
-          {/* Gallery Angle Thumbnails */}
-          <div className="grid grid-cols-4 gap-2.5 sm:gap-3">
+          {/* Gallery thumbnails: every photo, then the artwork, then the certificate */}
+          <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 sm:gap-3">
             {[
-              { id: "front", label: "Studio View", icon: Box },
-              { id: "macro", label: "Macro Detail", icon: Eye },
-              { id: "packaging", label: "Packaging", icon: Package },
-              { id: "certificate", label: "Certificate", icon: Award },
-            ].map((angle) => {
-              const Icon = angle.icon;
-              const isSelected = activeAngle === angle.id;
+              ...photoUrls.map((url, index) => ({
+                key: `photo-${index}`,
+                label: photoUrls.length > 1 ? `Photo ${index + 1}` : "Photo",
+                target: { kind: "photo", index } as GalleryView,
+                thumb: (
+                  <ProductImage
+                    src={url}
+                    visualId={artId}
+                    name={`${product.name}, photo ${index + 1}`}
+                    className="size-full"
+                    showStudioLighting={false}
+                    sizes="96px"
+                  />
+                ),
+              })),
+              {
+                key: "art",
+                label: "Studio art",
+                target: { kind: "art" } as GalleryView,
+                thumb: (
+                  <ProductVisual
+                    visualId={artId}
+                    name={`${product.name}, studio artwork`}
+                    className="size-full"
+                    showStudioLighting={false}
+                  />
+                ),
+              },
+              {
+                key: "certificate",
+                label: "Certificate",
+                target: { kind: "certificate" } as GalleryView,
+                thumb: (
+                  <div className="grid size-full place-items-center bg-amber-50/60 text-amber-700">
+                    <Award className="size-6" aria-hidden />
+                  </div>
+                ),
+              },
+            ].map((tile) => {
+              const isSelected =
+                view.kind === tile.target.kind &&
+                (view.kind !== "photo" ||
+                  (tile.target.kind === "photo" && tile.target.index === view.index));
               return (
                 <button
-                  key={angle.id}
+                  key={tile.key}
                   type="button"
-                  onClick={() => setActiveAngle(angle.id as typeof activeAngle)}
+                  aria-pressed={isSelected}
+                  aria-label={`Show ${tile.label.toLowerCase()}`}
+                  onClick={() => setView(tile.target)}
                   className={cn(
-                    "flex flex-col items-center justify-center rounded-lg border p-2 text-center transition-all",
+                    "flex flex-col items-stretch gap-1 rounded-lg border p-1.5 text-center transition-all",
                     isSelected
                       ? "border-indigo-600 bg-indigo-50/50 text-indigo-950 ring-2 ring-indigo-600/20"
                       : "border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50",
                   )}
                 >
-                  <Icon
-                    className={cn(
-                      "size-5 mb-1",
-                      isSelected ? "text-indigo-600" : "text-neutral-500",
-                    )}
-                  />
+                  <span className="relative block aspect-square overflow-hidden rounded-md bg-neutral-50">
+                    {tile.thumb}
+                  </span>
                   <span className="text-[10px] font-medium leading-tight">
-                    {angle.label}
+                    {tile.label}
                   </span>
                 </button>
               );
@@ -626,9 +681,12 @@ export function ProductDetail({
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <div className="flex flex-col items-center">
                     <div className="size-20 rounded-lg border border-neutral-200 bg-neutral-50 overflow-hidden">
-                      <ProductVisual
-                        visualId={product.visualId || product.slug || "generic"}
+                      <ProductImage
+                        images={product.images}
+                        visualId={artId}
+                        name={product.name}
                         showStudioLighting={false}
+                        sizes="80px"
                       />
                     </div>
                     <span className="mt-1 text-xs font-bold text-neutral-900">
@@ -648,9 +706,12 @@ export function ProductDetail({
                       <div key={bKey} className="flex items-center gap-3">
                         <div className="flex flex-col items-center">
                           <div className="size-20 rounded-lg border border-neutral-200 bg-neutral-50 overflow-hidden">
-                            <ProductVisual
+                            <ProductImage
+                              images={bItem.images}
                               visualId={bItem.visualId || bItem.slug || ""}
+                              name={bItem.name}
                               showStudioLighting={false}
+                              sizes="80px"
                             />
                           </div>
                           <span className="mt-1 text-xs font-bold text-neutral-900">
@@ -677,9 +738,6 @@ export function ProductDetail({
                   </div>
                   <div className="flex items-baseline gap-2 mt-0.5">
                     <span className="text-2xl font-black text-neutral-950">
-                      {formatPrice(bundleDiscounted)}
-                    </span>
-                    <span className="text-xs text-neutral-400 line-through">
                       {formatPrice(bundleTotal)}
                     </span>
                   </div>
@@ -919,9 +977,10 @@ export function ProductDetail({
                 </button>
                 <button
                   type="submit"
-                  className="rounded bg-neutral-900 px-4 py-2 font-semibold text-white hover:bg-indigo-600"
+                  disabled={isSubmittingReview}
+                  className="rounded bg-neutral-900 px-4 py-2 font-semibold text-white hover:bg-indigo-600 disabled:opacity-60"
                 >
-                  Post Review
+                  {isSubmittingReview ? "Posting…" : "Post Review"}
                 </button>
               </div>
             </form>

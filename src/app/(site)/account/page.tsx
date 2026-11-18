@@ -21,7 +21,6 @@ export default async function AccountPage() {
       <AccountDashboard
         userName={user.name}
         userEmail={user.email}
-        userRole={user.role}
       />
     </PageShell>
   );

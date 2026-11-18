@@ -8,7 +8,11 @@ export function Newsletter() {
   const [state, action, pending] = useActionState(subscribe, undefined);
 
   useEffect(() => {
-    if (state?.ok) toast.success("Thanks for subscribing!");
+    if (state?.ok) {
+      toast.success("Subscribed to questionable dispatches.", {
+        description: "Prepare for unwarranted correspondence.",
+      });
+    }
   }, [state]);
 
   return (
@@ -24,15 +28,7 @@ export function Newsletter() {
           </p>
         </div>
         <div className="w-full md:max-w-md">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              toast.success("Subscribed to questionable dispatches.", {
-                description: "Prepare for unwarranted correspondence.",
-              });
-            }}
-            className="flex"
-          >
+          <form action={action} className="flex">
             <label htmlFor="newsletter-email" className="sr-only">
               Email address
             </label>
@@ -41,14 +37,17 @@ export function Newsletter() {
               name="email"
               type="email"
               required
+              defaultValue={state?.email}
+              aria-describedby={state?.error ? "newsletter-error" : undefined}
               placeholder="Enter your email..."
               className="h-11 min-w-0 flex-1 rounded-l-md border border-neutral-300 bg-white px-4 text-xs sm:text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
             />
             <button
               type="submit"
-              className="h-11 rounded-r-md bg-neutral-900 px-5 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-indigo-600"
+              disabled={pending}
+              className="h-11 rounded-r-md bg-neutral-900 px-5 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-indigo-600 disabled:opacity-60"
             >
-              Subscribe
+              {pending ? "Subscribing…" : "Subscribe"}
             </button>
           </form>
           {state?.error && (

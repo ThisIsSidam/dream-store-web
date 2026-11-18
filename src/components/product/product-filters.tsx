@@ -18,15 +18,8 @@ const ODDNESS_OPTIONS = [
   "We Should Probably Investigate",
 ];
 
-const QUICK_FILTERS = [
-  { label: "All Items", key: "badge", value: undefined },
-  { label: "New Arrivals", key: "badge", value: "new" },
-  { label: "Best Sellers", key: "badge", value: "bestseller" },
-  { label: "Limited Drops", key: "badge", value: "limited" },
-];
-
 export function ProductFilters(props: Props) {
-  const { pathname, params, filters, categories, activeCategory } = props;
+  const { pathname, params, filters } = props;
   const hasActiveFilters =
     filters.min !== undefined ||
     filters.max !== undefined ||
