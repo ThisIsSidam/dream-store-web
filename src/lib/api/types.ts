@@ -51,7 +51,24 @@ export type Variant = {
 export type ProductDetail = {
   product: Product;
   variants: Variant[];
+  /** How many lines buyers can receive (the lines themselves stay secret). */
+  lineCount?: number;
 };
+
+/**
+ * What a shopper receives: a quote or line written for the product. This is the
+ * admin's view of one entry in a product's pool; `variantId` null = any variant.
+ */
+export type ProductLine = {
+  _id: string;
+  productId: string;
+  variantId: string | null;
+  text: string;
+  attribution?: string;
+};
+
+/** A line a buyer received. Only present once the order is delivered. */
+export type DeliveredLine = { text: string; attribution?: string };
 
 export type Pagination = {
   total: number;
@@ -141,6 +158,8 @@ export type OrderItem = {
   price: number;
   quantity: number;
   subtotal: number;
+  /** One per unit; empty (sealed) until the order is Delivered. */
+  lines?: DeliveredLine[];
 };
 
 export type Order = {

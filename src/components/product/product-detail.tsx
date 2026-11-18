@@ -24,6 +24,7 @@ import {
   Heart,
   Minus,
   Plus,
+  Quote,
   RotateCcw,
   ShieldCheck,
   ShoppingCart,
@@ -47,12 +48,15 @@ interface ProductDetailProps {
   product: Product;
   variants: Variant[];
   bundleProducts?: Product[];
+  /** How many lines (quotes) buyers can receive; the lines stay secret. */
+  lineCount?: number;
 }
 
 export function ProductDetail({
   product,
   variants,
   bundleProducts,
+  lineCount = 0,
 }: ProductDetailProps) {
   const router = useRouter();
   const { addToCart, toggleWishlist, isInWishlist, recordView } = useStore();
@@ -640,10 +644,34 @@ export function ProductDetail({
             </div>
           </section>
 
-          {/* 2. What's Included */}
+          {/* 2. What you actually receive */}
           <section>
             <h2 className="font-sans text-xl font-bold text-neutral-950 mb-4">
-              What&apos;s Included in the Box
+              What You Actually Receive
+            </h2>
+            <div className="flex gap-4 rounded-lg border border-indigo-100 bg-indigo-50/50 p-5 shadow-xs">
+              <Quote className="mt-0.5 size-6 shrink-0 text-indigo-600" aria-hidden />
+              <div className="space-y-2 text-sm leading-relaxed text-neutral-700">
+                <p>
+                  There is no physical product. Each unit you buy is delivered as{" "}
+                  <strong className="text-neutral-950">one line</strong>: a quote written for{" "}
+                  {product.name}
+                  {lineCount > 0
+                    ? `, drawn at random from the ${lineCount} we have on file.`
+                    : ", which we are still writing."}
+                </p>
+                <p className="text-xs text-neutral-500">
+                  It is chosen when your payment clears, stays sealed while your order ships, and opens when
+                  it is marked Delivered. Buy more units and you get more lines.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* 3. What's Included */}
+          <section>
+            <h2 className="font-sans text-xl font-bold text-neutral-950 mb-4">
+              What&apos;s Included in the Box (Allegedly)
             </h2>
             <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-xs">
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-neutral-700">

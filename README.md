@@ -53,6 +53,8 @@ Browser ──► Next.js (this app) ──► Node backend ──► Supabase (
 
 **Look.** The storefront follows a traditional marketplace layout: red header with wide search, category bar, white panels on a light grey page, orange Add to cart / Buy now buttons, a "Price details" panel in the cart and checkout, and a dark footer. Product pages show real data: price range and stock from the variants, and ratings computed from actual reviews. Photos come from Supabase Storage; a product without one (or whose photo fails to load) shows its built-in SVG artwork.
 
+**Quotes and lines.** There are no physical goods: each unit bought is delivered as a quote written for the product. The product page explains this, the order page shows the lines sealed until the order is Delivered (the page polls, so they open live), and admins manage a product's pool on its admin page ("Quotes and lines").
+
 **Branding.** Names live in [`src/config/site.ts`](src/config/site.ts); colours and type in [`src/app/globals.css`](src/app/globals.css) (brand colours).
 
 ## Layout

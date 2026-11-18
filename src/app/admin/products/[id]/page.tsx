@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, ImageOff } from "lucide-react";
+import { LinesCard } from "@/components/admin/lines-admin";
 import { ImageManager, ProductActions, VariantsCard } from "@/components/admin/product-admin";
 import { AdminCard, Overline, PageHeading } from "@/components/admin/ui";
 import { Badge } from "@/components/ui/badge";
 import { RemoteImage } from "@/components/ui/remote-image";
-import { getProductDetail } from "@/lib/api/admin";
+import { getProductDetail, listProductLines } from "@/lib/api/admin";
 import { formatPriceRange } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Product" };
@@ -16,6 +17,7 @@ export default async function AdminProductPage({ params }: PageProps<"/admin/pro
   const detail = await getProductDetail(id);
   if (!detail) notFound();
   const { product, variants } = detail;
+  const lines = await listProductLines(product._id);
 
   return (
     <>
@@ -73,8 +75,9 @@ export default async function AdminProductPage({ params }: PageProps<"/admin/pro
           <ImageManager product={product} />
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="space-y-6 lg:col-span-2">
           <VariantsCard productId={product._id} variants={variants} />
+          <LinesCard productId={product._id} variants={variants} lines={lines} />
         </div>
       </div>
     </>

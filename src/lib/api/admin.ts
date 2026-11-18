@@ -10,6 +10,7 @@ import type {
   Paginated,
   Product,
   ProductDetail,
+  ProductLine,
   Review,
   Section,
   Subscriber,
@@ -46,6 +47,12 @@ export async function getProductDetail(id: string) {
   if (!isEntityId(id)) return null;
   const detail = await backend<ProductDetail | null>(`/products/${id}`);
   return detail ?? null;
+}
+
+export async function listProductLines(productId: string) {
+  if (!isEntityId(productId)) return [];
+  const data = await backend<{ lines: ProductLine[] }>(`/products/${productId}/lines`);
+  return data.lines;
 }
 
 export async function getUserRecord(id: string) {

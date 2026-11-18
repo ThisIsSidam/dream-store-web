@@ -28,7 +28,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[id]">
   const { id } = await params;
   const detail = await getProduct(id);
   if (!detail) notFound();
-  const { product, variants } = detail;
+  const { product, variants, lineCount } = detail;
   const similar = (await getProductsByCategory(product.category).catch(() => []))
     .filter((p) => p._id !== product._id)
     .slice(0, 12);
@@ -88,6 +88,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[id]">
             product={product}
             variants={variants}
             bundleProducts={bundleProducts}
+            lineCount={lineCount}
           />
         </div>
         <ProductShelf

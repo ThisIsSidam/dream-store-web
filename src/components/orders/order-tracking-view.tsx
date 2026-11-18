@@ -1,5 +1,6 @@
 "use client";
 
+import { OrderLines } from "@/components/orders/order-lines";
 import { ProductImage } from "@/components/product/product-image";
 import type { Order } from "@/lib/api/types";
 import { toPlacedOrder, useStore } from "@/lib/client/store";
@@ -259,6 +260,8 @@ export function OrderTrackingView({ orderId }: { orderId: string }) {
             </div>
           )}
         </div>
+
+        {liveOrder && <OrderLines order={liveOrder} />}
 
         {/* Items List */}
         <div className="mt-8">

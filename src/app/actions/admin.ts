@@ -184,6 +184,52 @@ export async function deleteVariant(productId: string, variantId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Lines (what buyers receive)
+// ---------------------------------------------------------------------------
+
+const lineSchema = z.object({
+  text: z.string().trim().min(1, "Write the line first").max(600, "A line can be at most 600 characters"),
+  attribution: z.string().trim().max(160, "The attribution can be at most 160 characters").optional(),
+  variantId: z.string().optional(),
+});
+
+export type LineInput = z.input<typeof lineSchema>;
+
+export async function saveLine(productId: string, lineId: string | null, input: LineInput) {
+  const parsed = lineSchema.safeParse(input);
+  if (!parsed.success) {
+    await requireAdmin();
+    return { ok: false, error: parsed.error.issues[0].message } as const;
+  }
+  // Empty strings clear the attribution and make the line fit every variant.
+  const body = {
+    text: parsed.data.text,
+    attribution: parsed.data.attribution || null,
+    variantId: parsed.data.variantId || null,
+  };
+
+  const result = await run(() =>
+    lineId
+      ? backend(`/lines/${lineId}`, { method: "PATCH", body })
+      : backend(`/products/${productId}/lines`, { method: "POST", body }),
+  );
+  if (result.ok) {
+    refreshCatalog(productId);
+    revalidatePath(`/admin/products/${productId}`);
+  }
+  return result;
+}
+
+export async function deleteLine(productId: string, lineId: string) {
+  const result = await run(() => backend(`/lines/${lineId}`, { method: "DELETE" }));
+  if (result.ok) {
+    refreshCatalog(productId);
+    revalidatePath(`/admin/products/${productId}`);
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Home page content
 // ---------------------------------------------------------------------------
 
