@@ -17,7 +17,6 @@ export function CategoryStrip({ categories }: { categories: Category[] }) {
               <RemoteImage
                 src={category.imageUrl}
                 alt=""
-                width={200}
                 sizes="72px"
                 className="size-14 rounded-full bg-surface-container-high sm:size-[72px]"
                 imgClassName="transition-transform duration-300 group-hover:scale-110"

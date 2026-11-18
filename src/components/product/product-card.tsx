@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductVisual } from "@/components/ui/product-visual";
+import { ProductImage } from "@/components/product/product-image";
 import type { Product } from "@/lib/api/types";
 import { useStore } from "@/lib/client/store";
 import { cn, formatPrice, formatPriceRange } from "@/lib/utils";
@@ -59,7 +59,8 @@ export function ProductCard({
           href={productHref}
           className="block size-full"
         >
-          <ProductVisual
+          <ProductImage
+            images={product.images}
             visualId={visualId}
             name={product.name}
             className="size-full transition-transform duration-300 group-hover:scale-105"

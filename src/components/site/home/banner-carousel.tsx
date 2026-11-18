@@ -15,7 +15,6 @@ function BannerSlide({ banner, priority }: { banner: Banner; priority: boolean }
       <RemoteImage
         src={banner.imageUrl}
         alt=""
-        width={1600}
         priority={priority}
         sizes="(max-width: 1280px) 100vw, 1280px"
         className="absolute inset-0"

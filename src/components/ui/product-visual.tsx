@@ -5,7 +5,6 @@ interface ProductVisualProps {
   name?: string;
   className?: string;
   aspectRatio?: "square" | "video" | "wide";
-  size?: "sm" | "md" | "lg" | "xl";
   showStudioLighting?: boolean;
 }
 
@@ -14,7 +13,6 @@ export function ProductVisual({
   name,
   className,
   aspectRatio = "square",
-  size = "md",
   showStudioLighting = true,
 }: ProductVisualProps) {
   const aspectClass =
@@ -1639,7 +1637,10 @@ function renderVisual(id: string) {
           <div className="size-16 rounded-lg border-2 border-dashed border-neutral-300 flex items-center justify-center font-mono text-sm">
             YC
           </div>
-          <span className="text-xs font-mono mt-2">{id}</span>
+          {/* Only short slug-like ids are worth printing; never a URL or an object id. */}
+          {/^[a-z][a-z0-9-]{0,23}$/i.test(id) && (
+            <span className="text-xs font-mono mt-2">{id}</span>
+          )}
         </div>
       );
   }

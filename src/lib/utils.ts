@@ -46,7 +46,7 @@ export function formatDateTime(value: string | Date) {
   }).format(date);
 }
 
-/** Last N characters of a Mongo id, upper-cased ("#A1B2C3"). */
+/** Last N characters of an id, upper-cased ("#A1B2C3"). */
 export function shortId(id: string, length = 6) {
   return id.slice(-length).toUpperCase();
 }
@@ -63,17 +63,6 @@ export function hashString(value: string) {
 const blobs = ["blob-a", "blob-b", "blob-c"] as const;
 export function blobFor(seed: string) {
   return blobs[hashString(seed) % blobs.length];
-}
-
-/**
- * Cloudinary can resize + re-encode on the fly. Anything that isn't a
- * Cloudinary upload URL is returned untouched.
- */
-export function optimizeImage(url: string | null | undefined, width = 800) {
-  if (!url) return null;
-  const marker = "/image/upload/";
-  if (!url.includes("res.cloudinary.com") || !url.includes(marker)) return url;
-  return url.replace(marker, `${marker}f_auto,q_auto,w_${width}/`);
 }
 
 /** Only allow same-site relative redirects (`?next=`), never open redirects. */

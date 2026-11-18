@@ -1,12 +1,10 @@
 import Image from "next/image";
 import { ImageOff } from "lucide-react";
-import { cn, optimizeImage } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type Props = {
   src?: string | null;
   alt: string;
-  /** Requested width for Cloudinary transforms (defaults to a card-sized image). */
-  width?: number;
   className?: string;
   imgClassName?: string;
   fallback?: React.ReactNode;
@@ -16,20 +14,19 @@ type Props = {
 
 /**
  * Admin-entered image URLs can live on any host, so this uses `unoptimized`
- * (no next/image host allow-list) and lets Cloudinary do the resizing.
+ * (no next/image host allow-list).
  * Fills its parent - give the wrapper a size.
  */
 export function RemoteImage({
   src,
   alt,
-  width = 800,
   className,
   imgClassName,
   fallback,
   priority,
   sizes,
 }: Props) {
-  const url = optimizeImage(src, width);
+  const url = src || null;
 
   return (
     <div className={cn("relative overflow-hidden", className)}>

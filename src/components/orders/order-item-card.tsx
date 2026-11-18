@@ -10,7 +10,6 @@ export function OrderItemCard({ item }: { item: OrderItem }) {
       <RemoteImage
         src={item.productImage}
         alt=""
-        width={300}
         sizes="96px"
         className="size-20 shrink-0 bg-white sm:size-24"
         imgClassName="object-contain"
