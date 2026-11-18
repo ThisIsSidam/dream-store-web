@@ -106,7 +106,10 @@ export async function updateProduct(id: string, input: ProductFieldsInput) {
     await requireAdmin();
     return { ok: false, error: parsed.error.issues[0].message } as const;
   }
-  const result = await run(() => backend(`/products/${id}`, { method: "PUT", body: parsed.data }));
+  // The edit form shows every field, so an empty badge or note means "take it off":
+  // send null (an omitted field would leave the old value in place).
+  const body = { ...parsed.data, badge: parsed.data.badge ?? null, scarcityNote: parsed.data.scarcityNote || null };
+  const result = await run(() => backend(`/products/${id}`, { method: "PUT", body }));
   if (result.ok) {
     refreshCatalog(id);
     revalidatePath(`/admin/products/${id}`);

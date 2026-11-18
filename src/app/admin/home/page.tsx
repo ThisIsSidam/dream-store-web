@@ -65,7 +65,7 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin/home
               {banners.map((banner) => (
                 <Tr key={banner._id}>
                   <Td>
-                    <RemoteImage src={banner.imageUrl} alt="" width={200} sizes="64px" className="h-10 w-16 rounded bg-surface-container-low" fallback={<ImageOff className="size-4" />} />
+                    <RemoteImage src={banner.imageUrl} alt="" sizes="64px" className="h-10 w-16 rounded bg-surface-container-low" fallback={<ImageOff className="size-4" />} />
                   </Td>
                   <Td className="font-medium">{banner.title}</Td>
                   <Td className="max-w-sm truncate text-on-surface-variant">{banner.description}</Td>
@@ -90,7 +90,7 @@ export default async function AdminHome({ searchParams }: PageProps<"/admin/home
               {categories.map((category) => (
                 <Tr key={category._id}>
                   <Td>
-                    <RemoteImage src={category.imageUrl} alt="" width={100} sizes="40px" className={cn(thumb, "rounded-full")} fallback={<ImageOff className="size-4" />} />
+                    <RemoteImage src={category.imageUrl} alt="" sizes="40px" className={cn(thumb, "rounded-full")} fallback={<ImageOff className="size-4" />} />
                   </Td>
                   <Td className="font-medium capitalize">{category.name}</Td>
                   <Td className="font-mono text-xs text-on-surface-variant">{category.path}</Td>

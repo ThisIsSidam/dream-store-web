@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminCard, DataTable, EmptyRow, PageHeading, RowLink, Td, Th, Tr } from "@/components/admin/ui";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { Pagination } from "@/components/ui/pagination";
-import { isGuestId, listOrdersOfUser } from "@/lib/api/admin";
+import { getUserRecord, listOrdersOfUser } from "@/lib/api/admin";
 import { parsePage } from "@/lib/products";
 import { formatDateTime, formatMoney, pageHref, shortId } from "@/lib/utils";
 
@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "User orders" };
 
 export default async function AdminUserOrders({ params, searchParams }: PageProps<"/admin/users/[id]/orders">) {
   const { id } = await params;
-  if (isGuestId(id)) notFound();
+  if (!(await getUserRecord(id))) notFound();
   const sp = await searchParams;
   const { orders, pagination } = await listOrdersOfUser(id, parsePage(sp.page), 15);
 

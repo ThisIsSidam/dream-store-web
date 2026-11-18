@@ -13,6 +13,24 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The order exists (its items are reserved for a few minutes) but payment did
+ * not go through. The visitor can retry from `/checkout/<orderId>`.
+ */
+export class PaymentPendingError extends ApiError {
+  readonly orderId: string;
+
+  constructor(message: string, orderId: string) {
+    super(message, 402);
+    this.name = "PaymentPendingError";
+    this.orderId = orderId;
+  }
+}
+
+/** The message to show for anything a `catch` hands us. */
+export const messageOf = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
+
 type ErrorBody = {
   message?: unknown;
   error?: unknown;

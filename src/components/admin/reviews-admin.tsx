@@ -7,7 +7,7 @@ import { ConfirmDialog } from "@/components/ui/dialog";
 import { Pagination } from "@/components/ui/pagination";
 import type { Pagination as PaginationType, Review } from "@/lib/api/types";
 import { formatDateTime, pageHref } from "@/lib/utils";
-import { CheckCircle2, MessageSquare, Star, Trash2 } from "lucide-react";
+import { CheckCircle2, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -62,7 +62,6 @@ export function ReviewsAdminTable({
               const productObj =
                 typeof rev.productId === "object" ? rev.productId : null;
               const productName = productObj?.name || "Imaginary Product";
-              const productSlug = productObj?.slug || productObj?._id || "";
 
               return (
                 <Tr key={rev._id}>

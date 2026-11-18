@@ -41,7 +41,6 @@ export default async function AdminProductPage({ params }: PageProps<"/admin/pro
             <RemoteImage
               src={product.images[0]?.url}
               alt={product.name}
-              width={800}
               sizes="(max-width: 1024px) 100vw, 33vw"
               className="h-64 w-full bg-surface-container-low"
               fallback={<ImageOff className="size-10" aria-hidden />}

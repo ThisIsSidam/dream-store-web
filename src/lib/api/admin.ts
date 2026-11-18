@@ -1,4 +1,5 @@
 import "server-only";
+import { isEntityId } from "@/lib/ids";
 import { ApiError } from "./errors";
 import { backend } from "./server";
 import type {
@@ -42,23 +43,24 @@ export const listReviews = ({ page = 1, limit = 20 }: { page?: number; limit?: n
   });
 
 export async function getProductDetail(id: string) {
-  if (!/^[0-9a-f]{24}$/i.test(id)) return null;
+  if (!isEntityId(id)) return null;
   const detail = await backend<ProductDetail | null>(`/products/${id}`);
   return detail ?? null;
 }
 
 export async function getUserRecord(id: string) {
-  if (!/^[0-9a-f]{24}$/i.test(id)) return null;
+  if (!isEntityId(id)) return null;
   try {
     return await backend<UserRecord>(`/users/${id}`);
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) return null;
+    // 404 is a guest (carts belong to guests too, but they have no account) or a stale link.
+    if (error instanceof ApiError && (error.status === 401 || error.status === 404)) return null;
     throw error;
   }
 }
 
 export async function getOrderRecord(id: string) {
-  if (!/^[0-9a-f]{24}$/i.test(id)) return null;
+  if (!isEntityId(id)) return null;
   try {
     const data = await backend<{ order: Order | null }>(`/orders/${id}`);
     return data.order ?? null;
@@ -78,9 +80,6 @@ export async function getCartOfUser(userId: string) {
   return carts.find((cart) => cart.userId === userId) ?? null;
 }
 
-/** Guest ids are UUIDs, registered user ids are Mongo ObjectIds. */
-export const isGuestId = (id: string) => id.includes("-");
-
 /** Home-page content, uncached so edits show up straight away in the dashboard. */
 export async function getHomeContent() {
   const [banners, categories, sections] = await Promise.all([
@@ -92,7 +91,7 @@ export async function getHomeContent() {
 }
 
 export async function getSectionRecord(id: string) {
-  if (!/^[0-9a-f]{24}$/i.test(id)) return null;
+  if (!isEntityId(id)) return null;
   try {
     return await backend<Section>(`/home/sections/${id}`, { auth: "none" });
   } catch (error) {

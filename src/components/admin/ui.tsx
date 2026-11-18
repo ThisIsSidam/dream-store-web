@@ -100,11 +100,21 @@ export function EmptyRow({ colSpan, children }: { colSpan: number; children: Rea
   );
 }
 
-/** "#A1B2C3" pill linking to a user/product record; guests get a label instead. */
-export function IdTag({ id, kind, plain }: { id: string; kind: "users" | "products"; plain?: boolean }) {
+/** "#A1B2C3" pill linking to a user/product record; guests (carts only) get a label instead. */
+export function IdTag({
+  id,
+  kind,
+  plain,
+  guest,
+}: {
+  id: string;
+  kind: "users" | "products";
+  plain?: boolean;
+  guest?: boolean;
+}) {
   // `plain` renders the pill without a link, for use inside another link.
   if (plain) {
-    return kind === "users" && id.includes("-") ? (
+    return guest ? (
       <Badge tone="warning">Guest</Badge>
     ) : (
       <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
@@ -113,7 +123,7 @@ export function IdTag({ id, kind, plain }: { id: string; kind: "users" | "produc
       </span>
     );
   }
-  if (kind === "users" && id.includes("-")) {
+  if (guest) {
     return (
       <Link href={`/admin/users/${id}`} className="relative z-10">
         <Badge tone="warning">Guest</Badge>

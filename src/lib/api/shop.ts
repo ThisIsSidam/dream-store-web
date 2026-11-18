@@ -1,4 +1,5 @@
 import "server-only";
+import { isEntityId } from "@/lib/ids";
 import { ApiError } from "./errors";
 import { backend } from "./server";
 import type { Order, OrderStatus, Paginated } from "./types";
@@ -19,7 +20,7 @@ export function getMyOrders(filters: OrderFilters = {}) {
 }
 
 export async function getMyOrder(id: string): Promise<Order | null> {
-  if (!/^[0-9a-f]{24}$/i.test(id)) return null;
+  if (!isEntityId(id)) return null;
   try {
     const data = await backend<{ order: Order | null }>(`/orders/${id}`);
     return data.order ?? null;

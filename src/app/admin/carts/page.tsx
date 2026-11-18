@@ -34,7 +34,7 @@ export default async function AdminCarts({ searchParams }: PageProps<"/admin/car
                 <Tr key={cart._id} className={cart.items.length === 0 ? "opacity-60" : undefined}>
                   <Td>
                     <RowLink href={`/admin/users/${cart.userId}`} className="inline-block">
-                      <IdTag id={cart.userId} kind="users" plain />
+                      <IdTag id={cart.userId} kind="users" plain guest={cart.isGuest} />
                     </RowLink>
                   </Td>
                   <Td>

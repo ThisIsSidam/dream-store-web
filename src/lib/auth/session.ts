@@ -17,7 +17,7 @@ export const getSession = cache(async (): Promise<User | null> => {
   if (!jar.get(TOKEN_COOKIE)?.value) return null;
 
   try {
-    // /users/me returns the raw mongoose document, so `_id`, not `id`.
+    // /users/me returns `_id`, not `id`.
     const me = await backend<MeResponse>("/users/me");
     return {
       id: me._id,

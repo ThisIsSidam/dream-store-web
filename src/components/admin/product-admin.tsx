@@ -18,7 +18,7 @@ import { AdminField, adminInputClass } from "@/components/admin/form";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
 import type { Product, ProductImage, Variant } from "@/lib/api/types";
-import { cn, formatMoney, optimizeImage } from "@/lib/utils";
+import { cn, formatMoney } from "@/lib/utils";
 
 const MAX_FILES = 10;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -120,7 +120,7 @@ export function ProductActions({ product }: { product: Product }) {
               <select
                 className={adminInputClass}
                 value={values.oddness}
-                onChange={(e) => setValues({ ...values, oddness: e.target.value as any })}
+                onChange={(e) => setValues({ ...values, oddness: e.target.value as ProductFieldsInput["oddness"] })}
               >
                 <option value="Completely Normal">Completely Normal</option>
                 <option value="Slightly Strange">Slightly Strange</option>
@@ -135,7 +135,7 @@ export function ProductActions({ product }: { product: Product }) {
               <select
                 className={adminInputClass}
                 value={values.badge}
-                onChange={(e) => setValues({ ...values, badge: e.target.value as any })}
+                onChange={(e) => setValues({ ...values, badge: e.target.value as ProductFieldsInput["badge"] })}
               >
                 <option value="">No Badge</option>
                 <option value="Bestseller">Bestseller</option>
@@ -244,7 +244,7 @@ export function ImageManager({ product }: { product: Product }) {
               className="group relative aspect-square overflow-hidden rounded-lg border border-outline-variant/40 bg-surface-container-low"
             >
               <Image
-                src={optimizeImage(image.url, 300) ?? image.url}
+                src={image.url}
                 alt=""
                 fill
                 unoptimized

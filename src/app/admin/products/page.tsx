@@ -8,7 +8,7 @@ import { LinkButton } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { listProducts } from "@/lib/api/admin";
 import { parsePage } from "@/lib/products";
-import { formatPriceRange, optimizeImage, pageHref } from "@/lib/utils";
+import { formatPriceRange, pageHref } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Products" };
 
@@ -48,7 +48,7 @@ export default async function AdminProducts({ searchParams }: PageProps<"/admin/
           <tbody>
             {products.length === 0 && <EmptyRow colSpan={7}>No products found.</EmptyRow>}
             {products.map((product) => {
-              const image = optimizeImage(product.images[0]?.url, 120);
+              const image = product.images[0]?.url;
               return (
                 <Tr key={product._id}>
                   <Td>

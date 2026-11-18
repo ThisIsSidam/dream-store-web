@@ -5,21 +5,19 @@ import { Info, ShoppingCart } from "lucide-react";
 import { AdminCard, DataTable, EmptyRow, Overline, PageHeading, RowLink, Td, Th, Tr } from "@/components/admin/ui";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { getCartOfUser, getUserRecord, isGuestId, listOrdersOfUser } from "@/lib/api/admin";
+import { getCartOfUser, getUserRecord, listOrdersOfUser } from "@/lib/api/admin";
 import { formatDate, formatDateTime, formatMoney, shortId } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "User" };
 
 export default async function AdminUserPage({ params }: PageProps<"/admin/users/[id]">) {
   const { id } = await params;
-  const guest = isGuestId(id);
 
-  const [user, cart, orders] = await Promise.all([
-    guest ? null : getUserRecord(id),
-    getCartOfUser(id),
-    guest ? null : listOrdersOfUser(id, 1, 10),
-  ]);
-  if (!guest && !user) notFound();
+  // Guests and accounts both have UUID ids; only an account has a user record.
+  const [user, cart] = await Promise.all([getUserRecord(id), getCartOfUser(id)]);
+  const guest = !user;
+  if (guest && !cart) notFound();
+  const orders = user ? await listOrdersOfUser(id, 1, 10) : null;
 
   return (
     <>

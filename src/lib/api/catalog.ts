@@ -128,7 +128,7 @@ export async function getSections(): Promise<Section[]> {
       return sections.map((sec) => ({
         ...sec,
         items: (sec.items || [])
-          .filter((i) => i.productId && (i.productId as any)._id)
+          .filter((i) => i.productId?._id)
           .sort((a, b) => a.order - b.order),
       }));
     }
@@ -150,7 +150,7 @@ export async function getSection(id: string): Promise<Section | null> {
       return {
         ...section,
         items: (section.items || [])
-          .filter((i) => i.productId && (i.productId as any)._id)
+          .filter((i) => i.productId?._id)
           .sort((a, b) => a.order - b.order),
       };
     }

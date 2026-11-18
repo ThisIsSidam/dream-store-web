@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { buildUrl } from "@/lib/api/server";
+import { UUID_PATTERN } from "@/lib/ids";
 import {
   GUEST_COOKIE,
   GUEST_MAX_AGE,
@@ -18,13 +19,13 @@ import {
 const ALLOWED = [
   /^cart$/,
   /^cart\/add$/,
-  /^cart\/items\/[0-9a-f]{24}$/i,
+  new RegExp(`^cart/items/${UUID_PATTERN}$`, "i"),
   /^cart\/coupon$/,
-  /^cart\/save-for-later\/[0-9a-f]{24}$/i,
-  /^cart\/move-to-cart\/[0-9a-f]{24}$/i,
+  new RegExp(`^cart/save-for-later/${UUID_PATTERN}$`, "i"),
+  new RegExp(`^cart/move-to-cart/${UUID_PATTERN}$`, "i"),
   /^orders$/,
   /^orders\/(buy-now|confirm-payment|payment-failed)$/,
-  /^orders\/[0-9a-f]{24}$/i,
+  new RegExp(`^orders/${UUID_PATTERN}$`, "i"),
   /^products$/,
   /^products\/search$/,
   /^products\/[^/]+$/,

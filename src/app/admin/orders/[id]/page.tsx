@@ -29,7 +29,6 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                   <RemoteImage
                     src={item.productImage}
                     alt=""
-                    width={200}
                     sizes="64px"
                     className="size-16 shrink-0 rounded-lg bg-surface-container-low"
                     fallback={<Box className="size-5" aria-hidden />}

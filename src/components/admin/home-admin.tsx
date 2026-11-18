@@ -232,7 +232,6 @@ function ProductPicker({ taken, onPick }: { taken: Set<string>; onPick: (product
                 <RemoteImage
                   src={product.images[0]?.url}
                   alt=""
-                  width={100}
                   sizes="40px"
                   className="size-10 shrink-0 rounded bg-surface-container-low"
                   fallback={<ImageOff className="size-4" />}
@@ -347,7 +346,6 @@ export function SectionEditor({
                   <RemoteImage
                     src={entry.image}
                     alt=""
-                    width={100}
                     sizes="40px"
                     className="size-10 shrink-0 rounded bg-surface-container-low"
                     fallback={<ImageOff className="size-4" />}

@@ -1,6 +1,7 @@
 /**
  * Shapes returned by the Node backend (imagination-store).
- * Keep in sync with its mongoose models.
+ * The backend answers in camelCase with `_id` as the id key. Keep in sync with
+ * its `core/serialize.js`.
  */
 
 export type ProductImage = {
@@ -76,6 +77,8 @@ export type CartLine = {
   variantId: string;
   productId: string;
   productImage: string | null;
+  /** Artwork id to draw when `productImage` is missing or fails to load. */
+  visualId?: string;
   name: string;
   variantName?: string;
   price: number;
@@ -91,10 +94,12 @@ export type Cart = {
   appliedCoupon?: { code: string; description: string } | null;
 };
 
-/** A raw cart document, as listed by the admin endpoints. */
+/** A cart as listed by the admin endpoints. */
 export type CartRecord = {
   _id: string;
+  /** The owner: a user's id, or the browser's guest id when `isGuest`. */
   userId: string;
+  isGuest?: boolean;
   items: { variantId: string; name?: string; quantity: number }[];
   createdAt?: string;
   updatedAt?: string;
@@ -130,6 +135,7 @@ export type OrderItem = {
   variantId: string;
   productId: string;
   productImage?: string | null;
+  visualId?: string;
   name: string;
   variantName?: string;
   price: number;
@@ -197,9 +203,9 @@ export type ReviewsResponse = {
   pagination: Pagination;
 };
 
-/** Users listed by the admin endpoints come straight from mongoose (`_id`). */
 export type Subscriber = { _id: string; email: string; createdAt: string };
 
+/** A user as the admin and `/users/me` endpoints return it (`_id`, not `id`). */
 export type UserRecord = Omit<User, "id"> & { _id: string };
 
 export type Banner = {
