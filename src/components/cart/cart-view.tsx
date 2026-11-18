@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductVisual } from "@/components/ui/product-visual";
+import { ProductImage } from "@/components/product/product-image";
 import { useStore } from "@/lib/client/store";
 import { formatPrice } from "@/lib/utils";
 import {
@@ -28,7 +28,9 @@ export function CartView() {
     tax,
     total,
     cartCount,
+    isCartLoading,
     promoCode,
+    promoDescription,
     isPromoApplied,
     applyPromo,
     removePromo,
@@ -40,11 +42,24 @@ export function CartView() {
 
   const [inputPromo, setInputPromo] = useState("");
 
-  function handlePromoSubmit(e: React.FormEvent) {
+  async function handlePromoSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!inputPromo.trim()) return;
-    const ok = applyPromo(inputPromo);
+    const ok = await applyPromo(inputPromo);
     if (ok) setInputPromo("");
+  }
+
+  // First visit: the cart request is still in flight, so don't claim it's empty.
+  if (isCartLoading && cart.length === 0 && savedForLater.length === 0) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="rounded-xl border border-neutral-200 bg-white p-12 text-center text-sm text-neutral-500 shadow-xs"
+      >
+        Checking your cart…
+      </div>
+    );
   }
 
   if (cart.length === 0 && savedForLater.length === 0) {
@@ -99,10 +114,12 @@ export function CartView() {
                   {/* Item Image */}
                   <div className="size-24 shrink-0 rounded-lg border border-neutral-200 bg-neutral-50 overflow-hidden">
                     <Link href={`/product/${item.productId}`}>
-                      <ProductVisual
+                      <ProductImage
+                        src={item.image}
                         visualId={item.visualId}
                         name={item.name}
                         showStudioLighting={false}
+                        sizes="64px"
                       />
                     </Link>
                   </div>
@@ -214,10 +231,12 @@ export function CartView() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="size-16 rounded-md border border-neutral-200 bg-neutral-50 overflow-hidden shrink-0">
-                      <ProductVisual
+                      <ProductImage
+                        src={item.image}
                         visualId={item.visualId}
                         name={item.name}
                         showStudioLighting={false}
+                        sizes="64px"
                       />
                     </div>
                     <div>
@@ -266,7 +285,7 @@ export function CartView() {
 
             {isPromoApplied && (
               <div className="flex justify-between text-emerald-700 font-medium">
-                <span>Discount (QUESTIONABLE10)</span>
+                <span>Discount ({promoCode})</span>
                 <span>-{formatPrice(discount)}</span>
               </div>
             )}
@@ -286,7 +305,7 @@ export function CartView() {
             </div>
 
             <div className="flex justify-between text-neutral-600">
-              <span>Estimated Tax (8%)</span>
+              <span>Estimated Tax (5%)</span>
               <span className="font-medium text-neutral-900">
                 {formatPrice(tax)}
               </span>
@@ -303,8 +322,15 @@ export function CartView() {
             {isPromoApplied ? (
               <div className="flex items-center justify-between rounded-md bg-emerald-50 border border-emerald-200 p-2 text-xs text-emerald-800">
                 <span className="flex items-center gap-1.5 font-semibold">
-                  <CheckCircle2 className="size-3.5 text-emerald-600" />
-                  Code applied: QUESTIONABLE10
+                  <CheckCircle2 className="size-3.5 shrink-0 text-emerald-600" />
+                  <span>
+                    Code applied: {promoCode}
+                    {promoDescription && (
+                      <span className="block font-normal text-emerald-700">
+                        {promoDescription}
+                      </span>
+                    )}
+                  </span>
                 </span>
                 <button
                   type="button"
@@ -318,7 +344,8 @@ export function CartView() {
               <form onSubmit={handlePromoSubmit} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Promo code (try QUESTIONABLE10)"
+                  placeholder="Promo code (try IMAGINE10)"
+                  aria-label="Promo code"
                   value={inputPromo}
                   onChange={(e) => setInputPromo(e.target.value)}
                   className="h-9 min-w-0 flex-1 rounded border border-neutral-300 px-3 text-xs outline-none focus:border-indigo-600"

@@ -47,31 +47,10 @@ export function MysteryDrop() {
   }
 
   function handleAddRevealedToCart() {
-    // Add revealed product
-    addToCart({
+    // The backend resolves a product slug wherever it expects an id.
+    void addToCart({
       _id: "anti-gravity-vessel",
       name: "Anti-Gravity Ceramic Vessel",
-      slug: "anti-gravity-vessel",
-      category: "Science",
-      shortDescription:
-        "Ceramic vessel that hovers precisely 4mm above tabletops when filled with hot liquid.",
-      description:
-        "Anomaly Drop #88. Engineered using localized diamagnetic levitation.",
-      minPrice: 449,
-      maxPrice: 449,
-      totalStock: 14,
-      rating: 5.0,
-      reviewCount: 1,
-      badge: "Limited",
-      oddness: "We Should Probably Investigate",
-      visualId: "bottled-echoes",
-      specifications: {
-        "Levitation Height": "4.2mm",
-        Material: "Superconducting porcelain",
-      },
-      whatsIncluded: ["1 × Vessel", "1 × Thermal base"],
-      frequentlyBoughtTogether: [],
-      images: [],
     });
   }
 

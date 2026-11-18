@@ -1,4 +1,4 @@
-import { ProductVisual } from "@/components/ui/product-visual";
+import { ProductImage } from "@/components/product/product-image";
 import type { Banner, Product } from "@/lib/api/types";
 import { formatPrice } from "@/lib/utils";
 import { ArrowRight, Sparkles } from "lucide-react";
@@ -153,7 +153,8 @@ export function HeroDiscovery({ banner, featuredProducts }: HeroDiscoveryProps) 
                       className="group relative rounded-xl border border-neutral-200/80 bg-white p-3 shadow-xs transition-all hover:shadow-md hover:border-indigo-300"
                     >
                       <div className="aspect-square w-full rounded-lg bg-neutral-50 overflow-hidden">
-                        <ProductVisual
+                        <ProductImage
+                          images={"images" in item ? item.images : undefined}
                           visualId={item.visualId || item.slug || "generic"}
                           name={item.name}
                         />

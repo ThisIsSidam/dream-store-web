@@ -1,7 +1,8 @@
 "use client";
 
-import { ProductVisual } from "@/components/ui/product-visual";
-import { useStore, type PlacedOrder } from "@/lib/client/store";
+import { ProductImage } from "@/components/product/product-image";
+import { PaymentPendingError } from "@/lib/api/errors";
+import { useStore, type PaymentMethod, type PlacedOrder } from "@/lib/client/store";
 import { cn, formatPrice } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -14,29 +15,79 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { swrFetcher } from "@/lib/client/api";
 
 type Step = 1 | 2 | 3 | 4;
 
+/** Must match the backend's `paymentMethod` enum; payment itself is simulated. */
+const PAYMENT_METHODS: { id: PaymentMethod; label: string }[] = [
+  { id: "card", label: "Credit / Debit Card" },
+  { id: "upi", label: "UPI" },
+  { id: "cod", label: "Cash on Delivery (Questionable exchange upon receipt)" },
+  { id: "temporal_credit", label: "Temporal Credit (Pay yesterday)" },
+];
+
+const paymentLabel = (id: PaymentMethod) =>
+  PAYMENT_METHODS.find((method) => method.id === id)?.label ?? id;
+
+type AddressForm = {
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pin: string;
+  addressType: string;
+};
+
+const EMPTY_ADDRESS: AddressForm = {
+  fullName: "",
+  phone: "",
+  address: "",
+  city: "",
+  state: "",
+  pin: "",
+  addressType: "Home",
+};
+
+/** Pre-fills the form from the account: its default address, else just the name. */
+function addressFromUser(
+  user: { name: string; addresses?: (Partial<AddressForm> & { isDefault?: boolean })[] } | undefined,
+): AddressForm {
+  if (!user) return EMPTY_ADDRESS;
+  const saved = user.addresses?.find((a) => a.isDefault) ?? user.addresses?.[0];
+  if (!saved) return { ...EMPTY_ADDRESS, fullName: user.name ?? "" };
+  return {
+    fullName: saved.fullName || user.name || "",
+    phone: saved.phone ?? "",
+    address: saved.address ?? "",
+    city: saved.city ?? "",
+    state: saved.state ?? "",
+    pin: saved.pin ?? "",
+    addressType: saved.addressType || "Home",
+  };
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const {
+    signedIn,
     cart,
+    isCartLoading,
     subtotal,
     discount,
     shipping,
     tax,
     total,
     placeOrder,
-    clearCart,
   } = useStore();
 
   const [step, setStep] = useState<Step>(1);
 
-  const { data: user, isLoading: userLoading } = useSWR<{
+  const { data: user } = useSWR<{
     _id: string;
     name: string;
     email: string;
@@ -51,55 +102,33 @@ export default function CheckoutPage() {
       addressType: string;
       isDefault?: boolean;
     }>;
-  }>("users/me", swrFetcher, {
+  }>(signedIn ? "users/me" : null, swrFetcher, {
     shouldRetryOnError: false,
     revalidateOnFocus: false,
   });
 
-  const isAuthenticated = !!user;
-
-  // Step 1: Address State
-  const [address, setAddress] = useState({
-    fullName: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    pin: "",
-    addressType: "Home",
-  });
-
-  useEffect(() => {
-    if (user) {
-      if (user.addresses && user.addresses.length > 0) {
-        const def = user.addresses.find((a) => a.isDefault) || user.addresses[0];
-        setAddress((prev) => ({
-          ...prev,
-          fullName: def.fullName || user.name || prev.fullName,
-          phone: def.phone || prev.phone,
-          address: def.address || prev.address,
-          city: def.city || prev.city,
-          state: def.state || prev.state,
-          pin: def.pin || prev.pin,
-          addressType: def.addressType || "Home",
-        }));
-      } else if (user.name) {
-        setAddress((prev) => ({ ...prev, fullName: user.name }));
-      }
-    }
-  }, [user]);
+  // Step 1: Address. Starts from the account's default address; once the
+  // visitor types, their edits take over.
+  const [typedAddress, setAddress] = useState<AddressForm | null>(null);
+  const address = typedAddress ?? addressFromUser(user);
 
   // Step 2: Delivery Option
   const [deliveryOption, setDeliveryOption] =
     useState<PlacedOrder["deliveryOption"]>("standard");
 
   // Step 3: Payment Method
-  const [paymentMethod, setPaymentMethod] =
-    useState<PlacedOrder["paymentMethod"]>("card");
-  const [upiId, setUpiId] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
 
   const [isPlacing, setIsPlacing] = useState(false);
+
+  // Don't flash "empty" while the real cart is still loading.
+  if (isCartLoading && cart.length === 0) {
+    return (
+      <div className="mx-auto max-w-lg py-16 text-center text-sm text-neutral-500" role="status">
+        Fetching your questionable objects…
+      </div>
+    );
+  }
 
   // If cart is empty and not currently placing, show fallback redirect
   if (cart.length === 0 && !isPlacing) {
@@ -147,7 +176,7 @@ export default function CheckoutPage() {
   }
 
   async function handlePlaceOrder() {
-    if (!isAuthenticated) {
+    if (!signedIn) {
       toast.error("Please sign in to place your order.");
       router.push(`/signin?next=${encodeURIComponent("/checkout")}`);
       return;
@@ -163,8 +192,20 @@ export default function CheckoutPage() {
         description: `Order #${order.orderNumber} is now officially registered.`,
       });
       router.push(`/orders/success?orderId=${order.id}`);
-    } catch {
-      toast.error("Could not register order.");
+    } catch (error) {
+      if (error instanceof PaymentPendingError) {
+        // The order exists and its items are held for a few minutes: let them retry.
+        toast.error(error.message, {
+          description: "Your items are reserved. Try the payment again.",
+        });
+        router.push(`/checkout/${error.orderId}`);
+        return;
+      }
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Could not register order.",
+      );
       setIsPlacing(false);
     }
   }
@@ -474,26 +515,7 @@ export default function CheckoutPage() {
               </div>
 
               <form onSubmit={handlePaymentSubmit} className="space-y-4">
-                {[
-                  {
-                    id: "upi",
-                    label: "UPI (Google Pay, PhonePe, Paytm, BHIM)",
-                  },
-                  {
-                    id: "card",
-                    label: "Credit / Debit Card (Visa, MasterCard, Amex)",
-                  },
-                  {
-                    id: "netbanking",
-                    label: "Net Banking (All Major Financial Institutions)",
-                  },
-                  { id: "wallet", label: "Digital Wallet" },
-                  {
-                    id: "cod",
-                    label:
-                      "Cash on Delivery (Questionable exchange upon receipt)",
-                  },
-                ].map((pm) => (
+                {PAYMENT_METHODS.map((pm) => (
                   <label
                     key={pm.id}
                     className={cn(
@@ -508,67 +530,23 @@ export default function CheckoutPage() {
                       name="payMethod"
                       value={pm.id}
                       checked={paymentMethod === pm.id}
-                      onChange={() =>
-                        setPaymentMethod(pm.id as PlacedOrder["paymentMethod"])
-                      }
+                      onChange={() => setPaymentMethod(pm.id)}
                       className="accent-indigo-600"
                     />
                     <span>{pm.label}</span>
                   </label>
                 ))}
 
-                {/* Sub-inputs according to payment selection */}
-                {paymentMethod === "upi" && (
-                  <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-xs">
-                    <label className="block font-semibold text-neutral-800 mb-1">
-                      Enter UPI ID (e.g. yourname@okaxis)
-                    </label>
-                    <input
-                      type="text"
-                      value={upiId}
-                      onChange={(e) => setUpiId(e.target.value)}
-                      className="h-9 w-full sm:w-72 rounded border border-neutral-300 px-3 bg-white outline-none focus:border-indigo-600"
-                    />
-                  </div>
-                )}
-
-                {paymentMethod === "card" && (
-                  <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-xs space-y-3">
-                    <div>
-                      <label className="block font-semibold text-neutral-800 mb-1">
-                        Card Number
-                      </label>
-                      <input
-                        type="text"
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
-                        className="h-9 w-full sm:w-72 rounded border border-neutral-300 px-3 bg-white outline-none focus:border-indigo-600 font-mono"
-                      />
-                    </div>
-                    <div className="flex gap-3">
-                      <div>
-                        <label className="block font-semibold text-neutral-800 mb-1">
-                          Expiry
-                        </label>
-                        <input
-                          type="text"
-                          defaultValue="12/28"
-                          className="h-9 w-24 rounded border border-neutral-300 px-3 bg-white outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block font-semibold text-neutral-800 mb-1">
-                          CVV
-                        </label>
-                        <input
-                          type="password"
-                          defaultValue="420"
-                          className="h-9 w-20 rounded border border-neutral-300 px-3 bg-white outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <p
+                  className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-xs text-neutral-600"
+                  role="note"
+                >
+                  <span className="font-semibold text-neutral-800">
+                    Payment is simulated.
+                  </span>{" "}
+                  Nothing is charged and no card or account details are
+                  collected. Please don&apos;t type any in.
+                </p>
 
                 <div className="pt-4 flex items-center justify-between">
                   <button
@@ -643,8 +621,8 @@ export default function CheckoutPage() {
                       Change
                     </button>
                   </div>
-                  <p className="font-semibold text-neutral-900 capitalize">
-                    Method: {paymentMethod.toUpperCase()}
+                  <p className="font-semibold text-neutral-900">
+                    Method: {paymentLabel(paymentMethod)}
                   </p>
                   <p className="text-neutral-600 capitalize">
                     Delivery: {deliveryOption} priority
@@ -667,10 +645,12 @@ export default function CheckoutPage() {
                       className="flex items-center gap-3 p-3 text-xs"
                     >
                       <div className="size-12 rounded border border-neutral-200 bg-neutral-50 overflow-hidden shrink-0">
-                        <ProductVisual
+                        <ProductImage
+                          src={item.image}
                           visualId={item.visualId}
                           name={item.name}
                           showStudioLighting={false}
+                          sizes="48px"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -689,7 +669,7 @@ export default function CheckoutPage() {
 
               {/* Place Order CTA / Auth Gate */}
               <div className="pt-4 border-t border-neutral-100 flex flex-col gap-4">
-                {!isAuthenticated && !userLoading ? (
+                {!signedIn ? (
                   <div className="w-full rounded-xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 text-left">
                     <div className="flex items-start gap-3">
                       <div className="p-2 rounded-lg bg-amber-100 text-amber-800 shrink-0 mt-0.5">
@@ -733,7 +713,7 @@ export default function CheckoutPage() {
 
                   <button
                     type="button"
-                    disabled={isPlacing || (!isAuthenticated && !userLoading) || userLoading}
+                    disabled={isPlacing || !signedIn}
                     onClick={handlePlaceOrder}
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-md bg-neutral-900 px-8 py-3.5 text-sm font-bold text-white transition-all hover:bg-emerald-600 disabled:bg-neutral-300 shadow-md active:scale-98"
                   >

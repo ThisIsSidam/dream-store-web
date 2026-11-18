@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductVisual } from "@/components/ui/product-visual";
+import { ProductImage } from "@/components/product/product-image";
 import { useStore } from "@/lib/client/store";
 import { formatPrice } from "@/lib/utils";
 import {
@@ -84,10 +84,12 @@ export default function OrderSuccessPage() {
                   className="flex items-center gap-3.5 py-3"
                 >
                   <div className="size-12 rounded border border-neutral-200 bg-neutral-50 overflow-hidden shrink-0">
-                    <ProductVisual
+                    <ProductImage
+                      src={item.image}
                       visualId={item.visualId}
                       name={item.name}
                       showStudioLighting={false}
+                      sizes="48px"
                     />
                   </div>
                   <div className="flex-1 min-w-0">

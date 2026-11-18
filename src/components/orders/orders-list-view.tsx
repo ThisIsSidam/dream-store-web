@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductVisual } from "@/components/ui/product-visual";
+import { ProductImage } from "@/components/product/product-image";
 import { useStore } from "@/lib/client/store";
 import { cn, formatPrice } from "@/lib/utils";
 import {
@@ -91,10 +91,12 @@ export function OrdersListView() {
             <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="size-16 sm:size-20 rounded-lg border border-neutral-200 bg-neutral-50 overflow-hidden shrink-0">
-                  <ProductVisual
+                  <ProductImage
+                    src={firstItem?.image}
                     visualId={firstItem?.visualId || "generic"}
                     name={firstItem?.name}
                     showStudioLighting={false}
+                    sizes="80px"
                   />
                 </div>
                 <div>

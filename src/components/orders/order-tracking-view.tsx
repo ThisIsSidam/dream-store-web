@@ -1,7 +1,8 @@
 "use client";
 
-import { ProductVisual } from "@/components/ui/product-visual";
-import { useStore } from "@/lib/client/store";
+import { ProductImage } from "@/components/product/product-image";
+import type { Order } from "@/lib/api/types";
+import { toPlacedOrder, useStore } from "@/lib/client/store";
 import { cn, formatPrice } from "@/lib/utils";
 import {
     ArrowLeft,
@@ -69,61 +70,16 @@ export function OrderTrackingView({ orderId }: { orderId: string }) {
     getOrder(orderId) ||
     orders.find((o) => o.id === orderId || o.orderNumber === orderId);
 
-  const { data: liveData } = useSWR<{ order: any }>(
+  const { data: liveData } = useSWR<{ order: Order }>(
     orderId ? `orders/${orderId}` : null,
     swrFetcher,
     { refreshInterval: 4000, shouldRetryOnError: false },
   );
 
   const liveOrder = liveData?.order;
-
   const order: PlacedOrder | undefined = liveOrder
-    ? {
-        id: liveOrder._id,
-        orderNumber: liveOrder.orderNumber || (localOrder?.orderNumber ?? "DRM-0000"),
-        date: new Date(liveOrder.createdAt || Date.now()).toLocaleDateString("en-US", {
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-        }),
-        items:
-          liveOrder.items && liveOrder.items.length > 0
-            ? liveOrder.items.map((item: any) => ({
-                variantId: String(item.variantId),
-                productId: String(item.productId || ""),
-                name: item.name || "Imaginary Object",
-                variantName: item.variantName || "Standard",
-                price: item.price || 0,
-                quantity: item.quantity || 1,
-                visualId: item.visualId || "generic",
-                category: item.category || "Weird Stuff",
-                stock: 10,
-              }))
-            : localOrder?.items || [],
-        subtotal: liveOrder.priceBreakup?.subtotal ?? (localOrder?.subtotal ?? 0),
-        discount: liveOrder.priceBreakup?.discount ?? (localOrder?.discount ?? 0),
-        shipping: liveOrder.priceBreakup?.shipping ?? (localOrder?.shipping ?? 0),
-        tax: liveOrder.priceBreakup?.tax ?? (localOrder?.tax ?? 0),
-        total: liveOrder.priceBreakup?.total ?? (localOrder?.total ?? 0),
-        deliveryOption: liveOrder.deliveryOption || (localOrder?.deliveryOption ?? "standard"),
-        deliveryAddress: liveOrder.deliveryAddress || (localOrder?.deliveryAddress ?? {
-          fullName: "Customer",
-          phone: "",
-          address: "123 Reality Lane",
-          city: "Nowhere",
-          state: "Void",
-          pin: "00000",
-          addressType: "Home",
-        }),
-        paymentMethod: liveOrder.paymentMethod || (localOrder?.paymentMethod ?? "card"),
-        status: (liveOrder.trackingStatus || liveOrder.status || localOrder?.status || "Ordered") as PlacedOrder["status"],
-        statusDescription:
-          liveOrder.trackingTimeline?.[liveOrder.trackingTimeline.length - 1]?.desc ||
-          localOrder?.statusDescription ||
-          "Transaction recorded in the great ledger.",
-        estimatedDelivery: liveOrder.estimatedDelivery || (localOrder?.estimatedDelivery ?? "In 3-5 business days"),
-      }
-    : (localOrder || orders[0]);
+    ? toPlacedOrder(liveOrder)
+    : localOrder;
 
   if (!order) {
     return (
@@ -257,7 +213,7 @@ export function OrderTrackingView({ orderId }: { orderId: string }) {
                       </p>
                       {(() => {
                         const matching = liveOrder?.trackingTimeline?.find(
-                          (e: any) => e.status === st.status,
+                          (e) => e.status === st.status,
                         );
                         return (
                           <p className="text-[11px] text-neutral-500 italic mt-0.5 max-w-36 leading-tight">
@@ -280,7 +236,7 @@ export function OrderTrackingView({ orderId }: { orderId: string }) {
                 <span>Real-Time Dispatch Feed</span>
               </h4>
               <div className="space-y-2">
-                {liveOrder.trackingTimeline.map((ev: any, idx: number) => (
+                {liveOrder.trackingTimeline.map((ev, idx) => (
                   <div
                     key={idx}
                     className="flex items-start gap-2.5 text-xs bg-white p-2.5 rounded-md border border-neutral-200/50"
@@ -316,10 +272,12 @@ export function OrderTrackingView({ orderId }: { orderId: string }) {
                 className="flex items-center gap-4 p-4 text-xs sm:text-sm"
               >
                 <div className="size-16 rounded-lg border border-neutral-200 bg-neutral-50 overflow-hidden shrink-0">
-                  <ProductVisual
+                  <ProductImage
+                    src={item.image}
                     visualId={item.visualId}
                     name={item.name}
                     showStudioLighting={false}
+                    sizes="64px"
                   />
                 </div>
                 <div className="flex-1 min-w-0">

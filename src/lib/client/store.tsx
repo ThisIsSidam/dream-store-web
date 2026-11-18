@@ -1,10 +1,22 @@
 "use client";
 
-import type { Cart, Order, Product } from "@/lib/api/types";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { PaymentPendingError, messageOf } from "@/lib/api/errors";
+import type { Cart, CartLine, Order, Product } from "@/lib/api/types";
+import { useRouter } from "next/navigation";
+import React, { createContext, useCallback, useContext } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { api, swrFetcher } from "./api";
+import { useLocalStorage } from "./use-local-storage";
+
+/**
+ * The storefront's client state.
+ *
+ * The backend is the single source of truth for the cart, wishlist and
+ * orders: every action waits for it, shows its error if it refuses, and then
+ * updates the SWR cache from its answer. Only things that are genuinely
+ * per-browser (recently viewed, the mystery drop reveal) live in localStorage.
+ */
 
 export interface CartItem {
   variantId: string;
@@ -14,10 +26,21 @@ export interface CartItem {
   price: number;
   originalPrice?: number;
   quantity: number;
+  /** Photo URL, when the product has one. */
+  image?: string | null;
+  /** Artwork id: drawn when there is no photo or it fails to load. */
   visualId: string;
   category: string;
   stock: number;
 }
+
+export type PaymentMethod = NonNullable<Order["paymentMethod"]>;
+
+/**
+ * All the cart needs to add something: the backend takes an id (or a product
+ * slug) and the name is only used for the confirmation toast.
+ */
+export type AddableProduct = Pick<Product, "_id" | "name">;
 
 export interface PlacedOrder {
   id: string;
@@ -39,16 +62,20 @@ export interface PlacedOrder {
     pin: string;
     addressType: string;
   };
-  paymentMethod: "upi" | "card" | "netbanking" | "wallet" | "cod";
+  paymentMethod: PaymentMethod;
   status: "Ordered" | "Packed" | "Shipped" | "Out for Delivery" | "Delivered";
   statusDescription: string;
   estimatedDelivery: string;
 }
 
 interface StoreContextType {
+  /** Whether the visitor has an account session (wishlist and orders need one). */
+  signedIn: boolean;
+
   // Cart
   cart: CartItem[];
   savedForLater: CartItem[];
+  isCartLoading: boolean;
   cartCount: number;
   subtotal: number;
   discount: number;
@@ -56,34 +83,42 @@ interface StoreContextType {
   tax: number;
   total: number;
   promoCode: string;
+  /** Human-readable effect of the applied code, e.g. "10% imaginary discount". */
+  promoDescription: string;
   isPromoApplied: boolean;
-  applyPromo: (code: string) => Promise<boolean> | boolean;
-  removePromo: () => Promise<void> | void;
+  applyPromo: (code: string) => Promise<boolean>;
+  removePromo: () => Promise<void>;
+  /** Resolves `true` when the backend accepted the item. */
   addToCart: (
-    product: Product,
+    product: AddableProduct,
     variantId?: string,
     quantity?: number,
-  ) => void;
-  updateQuantity: (variantId: string, quantity: number) => void;
-  removeFromCart: (variantId: string) => void;
-  saveForLater: (variantId: string) => void;
-  moveToCartFromSaved: (variantId: string) => void;
-  clearCart: () => void;
+  ) => Promise<boolean>;
+  updateQuantity: (variantId: string, quantity: number) => Promise<void>;
+  removeFromCart: (variantId: string) => Promise<void>;
+  saveForLater: (variantId: string) => Promise<void>;
+  moveToCartFromSaved: (variantId: string) => Promise<void>;
 
   // Wishlist
   wishlist: string[];
   wishlistProducts: Product[];
-  toggleWishlist: (productId: string) => void;
+  toggleWishlist: (productId: string) => Promise<void>;
   isInWishlist: (productId: string) => boolean;
-  removeFromWishlist: (productId: string) => void;
+  removeFromWishlist: (productId: string) => Promise<void>;
 
   // Orders
   orders: PlacedOrder[];
+  /**
+   * Creates the order and confirms payment. Rejects with the backend's
+   * message when it refuses (e.g. out of stock). If the order was created but
+   * payment failed it rejects with a {@link PaymentPendingError} so the
+   * caller can send the visitor to `/checkout/<orderId>` to retry.
+   */
   placeOrder: (details: {
     address: PlacedOrder["deliveryAddress"];
     deliveryOption: PlacedOrder["deliveryOption"];
-    paymentMethod: PlacedOrder["paymentMethod"];
-  }) => Promise<PlacedOrder> | PlacedOrder;
+    paymentMethod: PaymentMethod;
+  }) => Promise<PlacedOrder>;
   getOrder: (id: string) => PlacedOrder | undefined;
 
   // Recently Viewed
@@ -94,568 +129,371 @@ interface StoreContextType {
   // Mystery Drop
   isMysteryRevealed: boolean;
   revealMysteryDrop: () => void;
-  subscribeMysteryNotification: (email: string) => void;
+  subscribeMysteryNotification: (email: string) => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | null>(null);
 
 const STORAGE_KEYS = {
-  CART: "dream_store_cart_v2",
-  SAVED: "dream_store_saved_v2",
-  WISHLIST: "dream_store_wishlist_v2",
-  ORDERS: "dream_store_orders_v2",
   RECENT: "dream_store_recent_v2",
   RECENT_ITEMS: "dream_store_recent_items_v2",
-  PROMO: "dream_store_promo_v2",
   MYSTERY: "dream_store_mystery_v2",
 };
 
-const INITIAL_ORDERS: PlacedOrder[] = [];
+// Stable fallbacks for useLocalStorage (it compares by reference).
+const NO_IDS: string[] = [];
+const NO_PRODUCTS: Product[] = [];
 
-export function StoreProvider({ children }: { children: React.ReactNode }) {
-  // 1. SWR Hooks for live backend state
-  const { data: backendCart, mutate: mutateCart } = useSWR<Cart>(
-    "cart",
-    swrFetcher,
-    {
-      revalidateOnFocus: true,
+const EMPTY_ADDRESS: PlacedOrder["deliveryAddress"] = {
+  fullName: "Recipient",
+  phone: "",
+  address: "Local Sector",
+  city: "Home",
+  state: "Primary Timeline",
+  pin: "00000",
+  addressType: "Home",
+};
+
+function toCartItem(line: CartLine): CartItem {
+  return {
+    variantId: line.variantId,
+    productId: line.productId,
+    name: line.name || "Artifact",
+    variantName: line.variantName,
+    price: line.price,
+    quantity: line.quantity,
+    image: line.productImage ?? null,
+    visualId: line.visualId ?? "",
+    category: "",
+    // The cart API doesn't report stock; the order call is what enforces it.
+    stock: Number.POSITIVE_INFINITY,
+  };
+}
+
+export function toPlacedOrder(order: Order): PlacedOrder {
+  const lastEvent = order.trackingTimeline?.[order.trackingTimeline.length - 1];
+  return {
+    id: order._id,
+    orderNumber: order.orderNumber || `DRM-${order._id.slice(-4).toUpperCase()}`,
+    date: new Date(order.createdAt).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }),
+    items: order.items.map((item) => ({
+      variantId: item.variantId,
+      productId: item.productId,
+      name: item.name,
+      variantName: item.variantName,
+      price: item.price,
+      quantity: item.quantity,
+      image: item.productImage ?? null,
+      visualId: item.visualId ?? "",
+      category: "",
+      stock: Number.POSITIVE_INFINITY,
+    })),
+    subtotal: order.priceBreakup?.subtotal ?? 0,
+    discount: order.priceBreakup?.discount ?? 0,
+    shipping: order.priceBreakup?.shipping ?? 0,
+    tax: order.priceBreakup?.tax ?? 0,
+    total: order.priceBreakup?.total ?? 0,
+    deliveryOption: order.deliveryOption ?? "standard",
+    deliveryAddress: order.deliveryAddress ?? EMPTY_ADDRESS,
+    paymentMethod: order.paymentMethod ?? "card",
+    status: order.trackingStatus ?? "Ordered",
+    statusDescription: lastEvent?.desc ?? "Order confirmed and logged.",
+    estimatedDelivery: order.estimatedDelivery ?? "In 3-5 business days",
+  };
+}
+
+type WishlistResponse = { wishlist: (string | Product)[] };
+
+export function StoreProvider({
+  children,
+  signedIn = false,
+}: {
+  children: React.ReactNode;
+  signedIn?: boolean;
+}) {
+  const router = useRouter();
+
+  const {
+    data: backendCart,
+    mutate: mutateCart,
+    isLoading: isCartLoading,
+  } = useSWR<Cart>("cart", swrFetcher, {
+    revalidateOnFocus: true,
+    shouldRetryOnError: false,
+  });
+
+  // Wishlists and order history belong to accounts; guests never ask for them.
+  const { data: backendWishlist, mutate: mutateWishlist } =
+    useSWR<WishlistResponse>(signedIn ? "users/wishlist" : null, swrFetcher, {
       shouldRetryOnError: false,
-    },
+    });
+
+  const { data: backendOrders, mutate: mutateOrders } = useSWR<{ orders: Order[] }>(
+    signedIn ? "orders" : null,
+    swrFetcher,
+    { shouldRetryOnError: false },
   );
 
-  const { data: backendWishlist, mutate: mutateWishlist } = useSWR<{
-    wishlist: (string | Product)[];
-  }>("users/wishlist", swrFetcher, {
-    shouldRetryOnError: false,
-  });
+  const [recentlyViewed, setRecentlyViewed] = useLocalStorage<string[]>(
+    STORAGE_KEYS.RECENT,
+    NO_IDS,
+  );
+  const [recentlyViewedProducts, setRecentlyViewedProducts] = useLocalStorage<Product[]>(
+    STORAGE_KEYS.RECENT_ITEMS,
+    NO_PRODUCTS,
+  );
+  const [isMysteryRevealed, setIsMysteryRevealed] = useLocalStorage<boolean>(
+    STORAGE_KEYS.MYSTERY,
+    false,
+  );
 
-  const { data: backendOrders, mutate: mutateOrders } = useSWR<{
-    orders: Order[];
-  }>("orders", swrFetcher, {
-    shouldRetryOnError: false,
-  });
-
-  // 2. Local state for hydration & offline/fallback
-  const [localCart, setLocalCart] = useState<CartItem[]>([]);
-  const [localSavedForLater, setLocalSavedForLater] = useState<CartItem[]>([]);
-  const [localWishlist, setLocalWishlist] = useState<string[]>([]);
-  const [localOrders, setLocalOrders] = useState<PlacedOrder[]>(INITIAL_ORDERS);
-  const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
-  const [recentlyViewedProducts, setRecentlyViewedProducts] = useState<Product[]>([]);
-  const [localPromo, setLocalPromo] = useState<string>("");
-  const [isMysteryRevealed, setIsMysteryRevealed] = useState<boolean>(false);
-  const [hydrated, setHydrated] = useState(false);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      // Purge legacy mock data
-      try {
-        localStorage.removeItem("yc_store_orders_v1");
-        localStorage.removeItem("yc_store_wishlist_v1");
-        localStorage.removeItem("yc_store_recent_v1");
-        localStorage.removeItem("yc_store_recent_items_v1");
-        localStorage.removeItem("yc_store_cart_v1");
-        localStorage.removeItem("yc_store_saved_v1");
-      } catch {}
-      const storedCart = localStorage.getItem(STORAGE_KEYS.CART);
-      if (storedCart) setLocalCart(JSON.parse(storedCart));
-
-      const storedSaved = localStorage.getItem(STORAGE_KEYS.SAVED);
-      if (storedSaved) setLocalSavedForLater(JSON.parse(storedSaved));
-
-      const storedWish = localStorage.getItem(STORAGE_KEYS.WISHLIST);
-      if (storedWish) setLocalWishlist(JSON.parse(storedWish));
-
-      const storedOrders = localStorage.getItem(STORAGE_KEYS.ORDERS);
-      if (storedOrders) {
-        const parsed = JSON.parse(storedOrders);
-        if (Array.isArray(parsed) && parsed.length > 0) setLocalOrders(parsed);
-      }
-
-      const storedRecent = localStorage.getItem(STORAGE_KEYS.RECENT);
-      if (storedRecent) setRecentlyViewed(JSON.parse(storedRecent));
-
-      const storedRecentItems = localStorage.getItem(STORAGE_KEYS.RECENT_ITEMS);
-      if (storedRecentItems) {
-        try {
-          const parsed = JSON.parse(storedRecentItems);
-          if (Array.isArray(parsed)) setRecentlyViewedProducts(parsed);
-        } catch {}
-      }
-
-      const storedPromo = localStorage.getItem(STORAGE_KEYS.PROMO);
-      if (storedPromo) setLocalPromo(storedPromo);
-
-      const storedMystery = localStorage.getItem(STORAGE_KEYS.MYSTERY);
-      if (storedMystery === "true") setIsMysteryRevealed(true);
-    } catch {
-      // Storage unavailable
-    } finally {
-      setHydrated(true);
-    }
-  }, []);
-
-  // Save changes to localStorage
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.RECENT, JSON.stringify(recentlyViewed));
-      localStorage.setItem(
-        STORAGE_KEYS.RECENT_ITEMS,
-        JSON.stringify(recentlyViewedProducts),
-      );
-    } catch {}
-  }, [recentlyViewed, recentlyViewedProducts, hydrated]);
-
-  // Map backend cart items to CartItem format
-  const cart: CartItem[] =
-    backendCart && backendCart.items
-      ? backendCart.items.map((item) => ({
-          variantId: item.variantId,
-          productId: item.productId,
-          name: item.name,
-          variantName: item.variantName,
-          price: item.price,
-          quantity: item.quantity,
-          visualId:
-            item.productImage ||
-            (typeof item.productId === "string" ? item.productId : "unknown"),
-          category: "",
-          stock: 100,
-        }))
-      : localCart;
-
-  const savedForLater: CartItem[] =
-    backendCart && backendCart.savedForLater
-      ? backendCart.savedForLater.map((s) => ({
-          variantId: s.variantId,
-          productId: s.variantId,
-          name: s.name || "Artifact",
-          price: 0,
-          quantity: s.quantity,
-          visualId: s.variantId,
-          category: "",
-          stock: 100,
-        }))
-      : localSavedForLater;
-
+  // -------------------------------------------------------------
+  // DERIVED STATE (all of it comes from the backend's answers)
+  // -------------------------------------------------------------
+  const cart = (backendCart?.items ?? []).map(toCartItem);
+  const savedForLater = (backendCart?.savedForLater ?? []).map(toCartItem);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Price calculations: prioritize backend priceBreakup, else local math
-  const subtotal =
-    backendCart?.priceBreakup?.subtotal ??
-    cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = backendCart?.priceBreakup?.subtotal ?? 0;
+  const discount = backendCart?.priceBreakup?.discount ?? 0;
+  const shipping = backendCart?.priceBreakup?.shipping ?? 0;
+  const tax = backendCart?.priceBreakup?.tax ?? 0;
+  const total = backendCart?.priceBreakup?.total ?? 0;
 
-  const discount =
-    backendCart?.priceBreakup?.discount ??
-    (localPromo ? Math.round(subtotal * 0.1 * 100) / 100 : 0);
-
-  const shipping =
-    backendCart?.priceBreakup?.shipping ??
-    (subtotal > 500 || subtotal === 0 ? 0 : 40);
-
-  const tax =
-    backendCart?.priceBreakup?.tax ??
-    Math.round((subtotal - discount) * 0.05 * 100) / 100;
-
-  const total =
-    backendCart?.priceBreakup?.total ??
-    Math.max(0, Math.round((subtotal - discount + shipping + tax) * 100) / 100);
-
-  const promoCode = backendCart?.couponCode || localPromo;
+  const promoCode = backendCart?.couponCode ?? "";
+  const promoDescription = backendCart?.appliedCoupon?.description ?? "";
   const isPromoApplied = Boolean(promoCode);
 
-  // Wishlist: map from backend wishlist items
-  const wishlist: string[] =
-    backendWishlist && Array.isArray(backendWishlist.wishlist)
-      ? backendWishlist.wishlist
-          .map((item) =>
-            typeof item === "string" ? item : item._id || item.slug || "",
-          )
-          .filter(Boolean)
-      : localWishlist;
+  const wishlistEntries = backendWishlist?.wishlist ?? [];
+  const wishlist: string[] = wishlistEntries
+    .map((entry) => (typeof entry === "string" ? entry : entry._id))
+    .filter(Boolean);
+  const wishlistProducts: Product[] = wishlistEntries.filter(
+    (entry): entry is Product => typeof entry === "object" && entry !== null,
+  );
 
-  const wishlistProducts: Product[] =
-    backendWishlist && Array.isArray(backendWishlist.wishlist)
-      ? backendWishlist.wishlist.filter(
-          (item): item is Product => typeof item === "object" && item !== null,
-        )
-      : [];
-
-  // Orders: map from backend orders
-  const orders: PlacedOrder[] =
-    backendOrders &&
-    Array.isArray(backendOrders.orders) &&
-    backendOrders.orders.length > 0
-      ? backendOrders.orders.map((o) => ({
-          id: o._id,
-          orderNumber: o.orderNumber || `DRM-${o._id.slice(-4).toUpperCase()}`,
-          date: new Date(o.createdAt).toLocaleDateString("en-US", {
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          }),
-          items: o.items.map((i) => ({
-            variantId: i.variantId,
-            productId: i.productId,
-            name: i.name,
-            variantName: i.variantName,
-            price: i.price,
-            quantity: i.quantity,
-            visualId: i.productImage || i.productId,
-            category: "",
-            stock: 100,
-          })),
-          subtotal: o.priceBreakup?.subtotal || 0,
-          discount: o.priceBreakup?.discount || 0,
-          shipping: o.priceBreakup?.shipping || 0,
-          tax: o.priceBreakup?.tax || 0,
-          total: o.priceBreakup?.total || 0,
-          deliveryOption:
-            (o.deliveryOption as PlacedOrder["deliveryOption"]) || "standard",
-          deliveryAddress: o.deliveryAddress || {
-            fullName: "Recipient",
-            phone: "",
-            address: "Local Sector",
-            city: "Home",
-            state: "Primary Timeline",
-            pin: "00000",
-            addressType: "Home",
-          },
-          paymentMethod:
-            (o.paymentMethod as PlacedOrder["paymentMethod"]) || "card",
-          status: o.trackingStatus || "Ordered",
-          statusDescription:
-            o.trackingTimeline?.[o.trackingTimeline.length - 1]?.desc ||
-            "Order confirmed and logged.",
-          estimatedDelivery: o.estimatedDelivery || "In 3-5 business days",
-        }))
-      : localOrders;
+  const orders: PlacedOrder[] = (backendOrders?.orders ?? []).map(toPlacedOrder);
 
   // -------------------------------------------------------------
   // CART ACTIONS
   // -------------------------------------------------------------
-  async function addToCart(
-    product: Product,
-    variantId?: string,
-    quantity = 1,
-  ) {
-    const pSlug: string = product.slug || product._id;
-    const targetVariantId: string = variantId || product._id || pSlug;
-    const visualId: string = product.visualId || pSlug || "generic";
-
-    // 1. Optimistic local update
-    setLocalCart((prev) => {
-      const existing = prev.find((item) => item.variantId === targetVariantId);
-      if (existing) {
-        return prev.map((item) =>
-          item.variantId === targetVariantId
-            ? { ...item, quantity: item.quantity + quantity }
-            : item,
-        );
-      }
-      const newItem: CartItem = {
-        variantId: targetVariantId,
-        productId: product._id || pSlug,
-        name: product.name,
-        price: product.minPrice || 199,
-        quantity,
-        visualId,
-        category: product.category,
-        stock: product.totalStock || 100,
-      };
-      return [...prev, newItem];
-    });
-
-    toast.success(`Added ${product.name} to cart.`, {
-      description: "You have made a decision.",
-    });
-
-    // 2. Synchronize with backend
+  /** Runs a cart request, shows its error if it fails, and keeps the cache honest either way. */
+  async function cartAction(request: () => Promise<Cart>, failure: string) {
     try {
-      await api("cart/add", {
-        method: "POST",
-        body: {
-          variantId: targetVariantId,
-          name: product.name,
-          quantity,
-        },
-      });
-      await mutateCart();
-    } catch {
-      // Offline fallback: keep local
-    }
-  }
-
-  async function updateQuantity(variantId: string, quantity: number) {
-    if (quantity <= 0) {
-      removeFromCart(variantId);
-      return;
-    }
-
-    setLocalCart((prev) =>
-      prev.map((item) =>
-        item.variantId === variantId ? { ...item, quantity } : item,
-      ),
-    );
-
-    try {
-      await api(`cart/items/${variantId}`, {
-        method: "PATCH",
-        body: { quantity },
-      });
-      await mutateCart();
-    } catch {
-      // Local state already updated
-    }
-  }
-
-  async function removeFromCart(variantId: string) {
-    setLocalCart((prev) => prev.filter((item) => item.variantId !== variantId));
-    toast.message("Item removed from cart.");
-
-    try {
-      await api(`cart/items/${variantId}`, { method: "DELETE" });
-      await mutateCart();
-    } catch {
-      // Local state updated
-    }
-  }
-
-  async function saveForLater(variantId: string) {
-    const item = cart.find((i) => i.variantId === variantId);
-    if (!item) return;
-
-    setLocalCart((prev) => prev.filter((i) => i.variantId !== variantId));
-    setLocalSavedForLater((prev) => [
-      ...prev.filter((i) => i.variantId !== variantId),
-      item,
-    ]);
-    toast.message(`Saved "${item.name}" for later consideration.`);
-
-    try {
-      await api(`cart/save-for-later/${variantId}`, { method: "POST" });
-      await mutateCart();
-    } catch {}
-  }
-
-  async function moveToCartFromSaved(variantId: string) {
-    const item = savedForLater.find((i) => i.variantId === variantId);
-    if (!item) return;
-
-    setLocalSavedForLater((prev) =>
-      prev.filter((i) => i.variantId !== variantId),
-    );
-    setLocalCart((prev) => [...prev, item]);
-    toast.success(`Moved "${item.name}" to cart.`);
-
-    try {
-      await api(`cart/move-to-cart/${variantId}`, { method: "POST" });
-      await mutateCart();
-    } catch {}
-  }
-
-  function clearCart() {
-    setLocalCart([]);
-    mutateCart(undefined, false);
-  }
-
-  async function applyPromo(code: string): Promise<boolean> {
-    const clean = code.trim().toUpperCase();
-    try {
-      await api("cart/coupon", {
-        method: "POST",
-        body: { couponCode: clean },
-      });
-      await mutateCart();
-      setLocalPromo(clean);
-      toast.success(`Promo code "${clean}" applied!`);
+      const updated = await request();
+      await mutateCart(updated, false);
       return true;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Invalid promo code.";
-      toast.error(msg);
+    } catch (error) {
+      toast.error(messageOf(error, failure));
+      await mutateCart(); // re-sync with whatever the backend really holds
       return false;
     }
   }
 
+  async function addToCart(product: AddableProduct, variantId?: string, quantity = 1) {
+    const added = await cartAction(
+      () =>
+        api<Cart>("cart/add", {
+          method: "POST",
+          // Without a variant the backend uses the product's first one.
+          body: { variantId: variantId || product._id, name: product.name, quantity },
+        }),
+      "Couldn't add that to your cart.",
+    );
+    if (added) {
+      toast.success(`Added ${product.name} to cart.`, {
+        description: "You have made a decision.",
+      });
+    }
+    return added;
+  }
+
+  async function updateQuantity(variantId: string, quantity: number) {
+    if (quantity <= 0) return removeFromCart(variantId);
+    await cartAction(
+      () => api<Cart>(`cart/items/${variantId}`, { method: "PATCH", body: { quantity } }),
+      "Couldn't change the quantity.",
+    );
+  }
+
+  async function removeFromCart(variantId: string) {
+    const removed = await cartAction(
+      () => api<Cart>(`cart/items/${variantId}`, { method: "DELETE" }),
+      "Couldn't remove that item.",
+    );
+    if (removed) toast.message("Item removed from cart.");
+  }
+
+  async function saveForLater(variantId: string) {
+    const item = cart.find((i) => i.variantId === variantId);
+    const saved = await cartAction(
+      () => api<Cart>(`cart/save-for-later/${variantId}`, { method: "POST" }),
+      "Couldn't save that for later.",
+    );
+    if (saved && item) toast.message(`Saved "${item.name}" for later consideration.`);
+  }
+
+  async function moveToCartFromSaved(variantId: string) {
+    const item = savedForLater.find((i) => i.variantId === variantId);
+    const moved = await cartAction(
+      () => api<Cart>(`cart/move-to-cart/${variantId}`, { method: "POST" }),
+      "Couldn't move that to your cart.",
+    );
+    if (moved && item) toast.success(`Moved "${item.name}" to cart.`);
+  }
+
+  async function applyPromo(code: string): Promise<boolean> {
+    const clean = code.trim().toUpperCase();
+    const applied = await cartAction(
+      () => api<Cart>("cart/coupon", { method: "POST", body: { code: clean } }),
+      "Couldn't apply that promo code.",
+    );
+    if (applied) toast.success(`Promo code "${clean}" applied!`);
+    return applied;
+  }
+
   async function removePromo() {
-    setLocalPromo("");
-    try {
-      await api("cart/coupon", { method: "DELETE" });
-      await mutateCart();
-    } catch {}
-    toast.message("Promo code removed.");
+    const removed = await cartAction(
+      () => api<Cart>("cart/coupon", { method: "DELETE" }),
+      "Couldn't remove the promo code.",
+    );
+    if (removed) toast.message("Promo code removed.");
   }
 
   // -------------------------------------------------------------
   // WISHLIST ACTIONS
   // -------------------------------------------------------------
-  async function toggleWishlist(productId: string) {
-    const isPresent = wishlist.includes(productId);
+  function askToSignIn(reason: string) {
+    toast.message(`Sign in to ${reason}.`, {
+      action: {
+        label: "Sign in",
+        onClick: () =>
+          router.push(
+            `/signin?next=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+          ),
+      },
+    });
+  }
 
-    if (isPresent) {
-      setLocalWishlist((prev) => prev.filter((id) => id !== productId));
-      toast.message("Removed from wishlist.");
-      try {
-        await api(`users/wishlist/${productId}`, { method: "DELETE" });
-        await mutateWishlist();
-      } catch {}
-    } else {
-      setLocalWishlist((prev) => [...prev, productId]);
+  async function changeWishlist(productId: string, method: "POST" | "DELETE") {
+    try {
+      const updated = await api<WishlistResponse>(`users/wishlist/${productId}`, { method });
+      await mutateWishlist(updated, false);
+      return true;
+    } catch (error) {
+      toast.error(messageOf(error, "Couldn't update your wishlist."));
+      await mutateWishlist();
+      return false;
+    }
+  }
+
+  async function toggleWishlist(productId: string) {
+    if (!signedIn) return askToSignIn("save items to your wishlist");
+    if (wishlist.includes(productId)) {
+      if (await changeWishlist(productId, "DELETE")) toast.message("Removed from wishlist.");
+    } else if (await changeWishlist(productId, "POST")) {
       toast.success("Added to wishlist.", {
         description: "Saved for unnecessary contemplation.",
       });
-      try {
-        await api(`users/wishlist/${productId}`, { method: "POST" });
-        await mutateWishlist();
-      } catch {}
     }
-  }
-
-  function isInWishlist(productId: string) {
-    return wishlist.includes(productId);
   }
 
   async function removeFromWishlist(productId: string) {
-    setLocalWishlist((prev) => prev.filter((id) => id !== productId));
-    try {
-      await api(`users/wishlist/${productId}`, { method: "DELETE" });
-      await mutateWishlist();
-    } catch {}
+    if (!signedIn) return askToSignIn("manage your wishlist");
+    await changeWishlist(productId, "DELETE");
   }
 
-  function recordView(productId: string, productObj?: Product) {
-    setRecentlyViewed((prev) =>
-      [productId, ...prev.filter((id) => id !== productId)].slice(0, 8),
-    );
-    if (productObj) {
-      setRecentlyViewedProducts((prev) =>
-        [
-          productObj,
-          ...prev.filter(
-            (p) =>
-              p._id !== productObj._id &&
-              (!productObj.slug || p.slug !== productObj.slug),
-          ),
-        ].slice(0, 8),
-      );
-    }
-  }
+  const isInWishlist = (productId: string) => wishlist.includes(productId);
 
   // -------------------------------------------------------------
-  // ORDER ACTIONS
+  // RECENTLY VIEWED (per-browser; stable so effects can depend on it)
+  // -------------------------------------------------------------
+  const recordView = useCallback(
+    (productId: string, productObj?: Product) => {
+      setRecentlyViewed((prev) =>
+        [productId, ...prev.filter((id) => id !== productId)].slice(0, 8),
+      );
+      if (productObj) {
+        setRecentlyViewedProducts((prev) =>
+          [
+            productObj,
+            ...prev.filter(
+              (p) =>
+                p._id !== productObj._id &&
+                (!productObj.slug || p.slug !== productObj.slug),
+            ),
+          ].slice(0, 8),
+        );
+      }
+    },
+    [setRecentlyViewed, setRecentlyViewedProducts],
+  );
+
+  // -------------------------------------------------------------
+  // ORDERS
   // -------------------------------------------------------------
   async function placeOrder(details: {
     address: PlacedOrder["deliveryAddress"];
     deliveryOption: PlacedOrder["deliveryOption"];
-    paymentMethod: PlacedOrder["paymentMethod"];
+    paymentMethod: PaymentMethod;
   }): Promise<PlacedOrder> {
-    // 1. Try backend order placement
+    // Throws the backend's own message (out of stock, not signed in, ...).
+    const created = await api<{ order: Order }>("orders", {
+      method: "POST",
+      body: {
+        deliveryAddress: details.address,
+        deliveryOption: details.deliveryOption,
+        paymentMethod: details.paymentMethod,
+      },
+    });
+    const pending = created.order;
+
+    let confirmed: Order;
     try {
-      const created = await api<{ order: Order }>("orders", {
+      const result = await api<{ order: Order }>("orders/confirm-payment", {
         method: "POST",
-        body: {
-          deliveryAddress: details.address,
-          deliveryOption: details.deliveryOption,
-          paymentMethod: details.paymentMethod,
-        },
+        body: { orderId: pending._id },
       });
-
-      const orderDoc = created.order || created;
-
-      // 2. Confirm payment to advance order status and schedule tracking
-      await api("orders/confirm-payment", {
-        method: "POST",
-        body: { orderId: orderDoc._id },
-      });
-
-      clearCart();
-      await mutateCart();
-      await mutateOrders();
-
-      const confirmedOrder: PlacedOrder = {
-        id: orderDoc._id,
-        orderNumber:
-          orderDoc.orderNumber || `DRM-${orderDoc._id.slice(-4).toUpperCase()}`,
-        date: new Date().toLocaleDateString("en-US", {
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-        }),
-        items: [...cart],
-        subtotal,
-        discount,
-        shipping,
-        tax,
-        total,
-        deliveryOption: details.deliveryOption,
-        deliveryAddress: details.address,
-        paymentMethod: details.paymentMethod,
-        status: "Ordered",
-        statusDescription: "Transaction recorded in the great ledger.",
-        estimatedDelivery: orderDoc.estimatedDelivery || "In 3-5 business days",
-      };
-
-      setLocalOrders((prev) => [confirmedOrder, ...prev]);
-      return confirmedOrder;
-    } catch (err) {
-      console.warn(
-        "Backend order creation failed, generating local confirmed order:",
-        err,
+      confirmed = result.order;
+    } catch (error) {
+      await mutateCart(); // the cart was already moved into the pending order
+      throw new PaymentPendingError(
+        messageOf(error, "Payment didn't go through."),
+        pending._id,
       );
-      // Fallback local order creation
-      const randomNum = Math.floor(1000 + Math.random() * 9000);
-      const orderNumber = `YC-${randomNum}`;
-      const id = `yc-order-${randomNum}`;
-
-      const fallbackOrder: PlacedOrder = {
-        id,
-        orderNumber,
-        date: new Date().toLocaleDateString("en-US", {
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-        }),
-        items: [...cart],
-        subtotal,
-        discount,
-        shipping,
-        tax,
-        total,
-        deliveryOption: details.deliveryOption,
-        deliveryAddress: details.address,
-        paymentMethod: details.paymentMethod,
-        status: "Ordered",
-        statusDescription: "Transaction recorded in the great ledger.",
-        estimatedDelivery:
-          details.deliveryOption === "temporal"
-            ? "Arrived Yesterday (check temporal buffer)"
-            : details.deliveryOption === "express"
-              ? "Tomorrow by 5:00 PM"
-              : "In 3-5 business days",
-      };
-
-      setLocalOrders((prev) => [fallbackOrder, ...prev]);
-      clearCart();
-      return fallbackOrder;
     }
+
+    await Promise.all([
+      mutateCart(),
+      mutateOrders(
+        (previous) => ({
+          orders: [
+            confirmed,
+            ...(previous?.orders ?? []).filter((o) => o._id !== confirmed._id),
+          ],
+        }),
+        false,
+      ),
+    ]);
+    return toPlacedOrder(confirmed);
   }
 
   function getOrder(id: string): PlacedOrder | undefined {
+    const needle = id.toLowerCase();
     return orders.find(
-      (o) =>
-        o.id === id ||
-        o.orderNumber.toLowerCase() === id.toLowerCase() ||
-        o.id.toLowerCase() === id.toLowerCase(),
+      (o) => o.id.toLowerCase() === needle || o.orderNumber.toLowerCase() === needle,
     );
   }
 
+  // -------------------------------------------------------------
+  // MYSTERY DROP
+  // -------------------------------------------------------------
   function revealMysteryDrop() {
     setIsMysteryRevealed(true);
-    try {
-      localStorage.setItem(STORAGE_KEYS.MYSTERY, "true");
-    } catch {}
     toast.success("Mystery Drop Revealed!", {
       description: "Anomaly Drop #88: Anti-Gravity Ceramic Vessel.",
     });
@@ -663,23 +501,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   async function subscribeMysteryNotification(email: string) {
     try {
-      await api("newsletter/subscribe", {
-        method: "POST",
-        body: { email },
+      await api("newsletter/subscribe", { method: "POST", body: { email } });
+      toast.success(`Notification set for ${email}.`, {
+        description: "We will alert you when reality bends.",
       });
-    } catch {
-      // Ignore if already subscribed or offline
+    } catch (error) {
+      toast.error(messageOf(error, "Couldn't set that notification."));
     }
-    toast.success(`Notification set for ${email}.`, {
-      description: "We will alert you when reality bends.",
-    });
   }
 
   return (
     <StoreContext.Provider
       value={{
+        signedIn,
         cart,
         savedForLater,
+        isCartLoading,
         cartCount,
         subtotal,
         discount,
@@ -687,6 +524,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         tax,
         total,
         promoCode,
+        promoDescription,
         isPromoApplied,
         applyPromo,
         removePromo,
@@ -695,7 +533,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         removeFromCart,
         saveForLater,
         moveToCartFromSaved,
-        clearCart,
         wishlist,
         wishlistProducts,
         toggleWishlist,
@@ -720,7 +557,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 export function useStore() {
   const context = useContext(StoreContext);
   if (!context) {
-    throw new Error("useStore must be used within a StoreProvider");
+    throw new Error("useStore must be used inside <StoreProvider>");
   }
   return context;
 }
