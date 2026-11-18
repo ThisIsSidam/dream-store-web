@@ -1,8 +1,7 @@
 # Dream Store (web)
 
-The storefront **and** the admin dashboard in one Next.js app. It replaces the
-Flutter web app (`dream_store`) and the Angular dashboard (`dream-dashboard`).
-The Node backend (`imagination-store`) is unchanged and stays a separate service.
+The storefront **and** the admin dashboard in one Next.js app. It talks to the
+Node backend (`../dream-store-backend`), which keeps its data in Supabase.
 
 - **Storefront** - home, categories, product lists, search, product page, cart, checkout, orders, account, sign in / up, info pages.
 - **Dashboard** - `/admin/*`: products (+ variants and images), users, orders, carts, newsletter subscribers, and home-page content (banners, categories, sections). Admin role only.
@@ -15,27 +14,28 @@ npm install
 npm run dev                   # http://localhost:3000 (use -p to change)
 ```
 
-The backend must be reachable at `BACKEND_URL` (default `http://localhost:3000`, so run one of the two on a different port, e.g. `next dev -p 3001`).
+The backend must be reachable at `BACKEND_URL` (default `http://localhost:3411`, the backend's default port).
 
 ```bash
 npm run build && npm start    # production
 npm run lint
+npm run typecheck
+npm test                      # unit tests for the pure helpers
+npm run check                 # typecheck + lint + tests
 ```
 
 ### Making an admin
 
-There is no admin sign-up. Register a normal account, then flip its role in MongoDB:
-
-```js
-db.users.updateOne({ email: "you@example.com" }, { $set: { role: "admin" } })
-```
+There is no admin sign-up. The backend's seed script (`npm run seed` there) creates `admin@dreamstore.com`
+(password `admin123` on a local stack; otherwise from `SEED_ADMIN_PASSWORD` or generated). To promote someone else,
+set `role = 'admin'` on their row in the Supabase table editor.
 
 Sign in at `/signin`; admins get a "Admin dashboard" entry on `/account` and are sent to `/admin` after signing in.
 
 ## How it fits together
 
 ```
-Browser ──► Next.js (this app) ──► Node backend ──► MongoDB
+Browser ──► Next.js (this app) ──► Node backend ──► Supabase (Postgres + Storage)
              ├─ server components / actions call the backend directly
              └─ /api/backend/* bridges client-side calls (cart, checkout, live search)
 ```
@@ -51,9 +51,9 @@ Browser ──► Next.js (this app) ──► Node backend ──► MongoDB
 
 **Caching.** Public catalogue reads are cached for 60s and expired on demand when an admin edits something (`updateTag`). Anything user-specific is uncached.
 
-**Look.** The storefront follows a traditional marketplace layout: red header with wide search, category bar, white panels on a light grey page, orange Add to cart / Buy now buttons, a "Price details" panel in the cart and checkout, and a dark footer. Product pages show only real data (price, stock, description); there are no ratings or "% off" badges because the backend has neither.
+**Look.** The storefront follows a traditional marketplace layout: red header with wide search, category bar, white panels on a light grey page, orange Add to cart / Buy now buttons, a "Price details" panel in the cart and checkout, and a dark footer. Product pages show real data: price range and stock from the variants, and ratings computed from actual reviews. Photos come from Supabase Storage; a product without one (or whose photo fails to load) shows its built-in SVG artwork.
 
-**Branding.** Names live in [`src/config/site.ts`](src/config/site.ts); colours and type in [`src/app/globals.css`](src/app/globals.css) (brand colours from the Flutter theme).
+**Branding.** Names live in [`src/config/site.ts`](src/config/site.ts); colours and type in [`src/app/globals.css`](src/app/globals.css) (brand colours).
 
 ## Layout
 
@@ -78,4 +78,4 @@ src/
 - **Payment is simulated.** "Finalize Manifestation" calls `POST /orders/confirm-payment`, which now only lets the order's owner confirm it, but still needs no real payment. Put a payment provider (and a webhook that confirms the order) in front of that before selling anything.
 - **Newsletter has no unsubscribe link.** Addresses are stored (`/admin/newsletter` lists them and can remove one), but there is no public unsubscribe flow or mailer.
 - **Info pages** (`/returns`, `/support`, `/privacy`) still need your real policies. Set `supportEmail` in `src/config/site.ts` for the support page.
-- Guests can't check out (the backend requires a signed-in user for orders).
+- Guests can't check out (the backend requires a signed-in user for orders); their cart is kept when they sign in or up.
